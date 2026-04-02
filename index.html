@@ -27,13 +27,13 @@
 
         body {
             background-color: #FFFFFF;
-            font-family: 'Lora', serif; /* Letra de párrafos */
+            font-family: 'Lora', serif;
             color: var(--color-dark);
             overflow-x: hidden;
         }
 
         h1, h2, h3, h4, .title-font {
-            font-family: 'Playfair Display', serif; /* Letra de títulos */
+            font-family: 'Playfair Display', serif;
             color: var(--color-deep-blue);
         }
 
@@ -71,10 +71,8 @@
 
         .visualization-section {
             padding: 100px 0;
-            /* Sin bordes ni cajas, integrado al fondo blanco */
         }
 
-        /* Fondo sutil para alternar secciones */
         .bg-alternate {
             background-color: var(--color-light-bg);
         }
@@ -95,10 +93,9 @@
 
         .chart-container {
             width: 100%;
-            height: 500px;
+            height: 550px; /* Un poco más alto para los nombres de los ejes */
         }
 
-        /* Controles interactivos estilizados */
         .custom-select {
             appearance: none;
             background-color: transparent;
@@ -124,7 +121,6 @@
             opacity: 1;
             transform: translateY(0);
         }
-        /* Retraso ligero para el texto vs la gráfica */
         .delay-text { transition-delay: 0.3s; }
     </style>
 </head>
@@ -133,7 +129,7 @@
     <section class="hero-section text-center reveal active">
         <div class="container">
             <h1 class="hero-title">El Mapa de la Traducción<br>en América Latina</h1>
-            <p class="hero-subtitle">Un viaje de quince años a través de los flujos editoriales, las lenguas de origen y los actores que moldean el panorama literario del continente (2010 - 2025).</p>
+            <p class="hero-subtitle">Un recorrido a través de los flujos editoriales, las lenguas de origen y los actores que moldean el panorama literario del continente (2010 - 2025).</p>
             
             <div class="credits">
                 <strong>Investigación conjunta:</strong><br>
@@ -148,16 +144,16 @@
                 <div class="col-lg-5 reveal delay-text">
                     <h2 class="chart-title">El Pulso Editorial: Imprentas Comerciales vs. Prensas Universitarias</h2>
                     <p class="chart-description">
-                        La democratización de la literatura extranjera no ocurre en un vacío. Este análisis desvela cómo se reparte el esfuerzo de traducción entre el <em>músculo financiero</em> de las editoriales comerciales y la <em>labor académica</em> de las prensas universitarias. 
+                        La difusión de la literatura traducida se apoya en distintas infraestructuras editoriales a lo largo del continente. Este análisis explora cómo se distribuye el volumen de publicaciones entre las editoriales comerciales y las prensas universitarias.
                         <br><br>
-                        A través del continente, se observan diferencias abismales en la infraestructura cultural. Mientras algunos países dependen casi exclusivamente de la maquinaria comercial para acceder a nuevas narrativas, en otros, las universidades actúan como bastiones vitales de la literatura traducida.
+                        En el siguiente gráfico de barras apiladas, el eje horizontal representa el <strong>país de publicación</strong>, mientras que la altura en el eje vertical indica la <strong>cantidad total de publicaciones traducidas</strong>. Los colores distinguen el tipo de agente editorial, permitiendo observar su participación relativa en cada territorio. Utilice el menú desplegable inferior para explorar los datos en años específicos o visualizar el acumulado histórico.
                     </p>
                     
                     <div class="filter-container">
                         <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año de Publicación:</label>
                         <select id="filtroAnoVis1" class="custom-select">
                             <option value="TODOS">Todos los años históricos</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
                 <div class="col-lg-7 reveal">
@@ -173,9 +169,9 @@
                 <div class="col-lg-5 reveal delay-text">
                     <h2 class="chart-title">Las Voces Originales: Evolución Histórica de la Lengua</h2>
                     <p class="chart-description">
-                        ¿Qué lenguas dominan la imaginación del lector latinoamericano? La traducción es, en esencia, un mapa de la influencia cultural global. 
+                        La traducción literaria funciona como un mapa de intercambio cultural, revelando las lenguas de origen que nutren el catálogo latinoamericano. Al observar el periodo 2010-2025, es posible rastrear la diversidad de idiomas que componen este ecosistema a lo largo del tiempo.
                         <br><br>
-                        Al observar la evolución histórica desde el año 2010, se revela el peso hegemónico de ciertas lenguas y el surgimiento paulatino de otras. Este paisaje fluido muestra cómo crisis globales, tendencias del mercado y descubrimientos literarios han expandido o contraído el espectro de los idiomas desde los cuales se traduce, dictando qué voces cruzan nuestras fronteras.
+                        El gráfico de áreas apiladas ilustra esta evolución: el eje horizontal traza los <strong>años de publicación</strong>, y el eje vertical mide la <strong>cantidad de publicaciones</strong>. Cada franja de color corresponde a uno de los idiomas de origen más frecuentes; el grosor de la franja refleja el volumen de libros traducidos desde ese idioma en un año determinado. Puede pasar el cursor sobre las áreas para inspeccionar las cifras exactas de cada periodo.
                     </p>
                 </div>
                 <div class="col-lg-7 reveal">
@@ -191,15 +187,16 @@
                 <div class="col-lg-5 reveal delay-text">
                     <h2 class="chart-title">El Gigante Lusófono frente a la Región Hispanohablante</h2>
                     <p class="chart-description">
-                        Brasil, con su magnitud demográfica y su singularidad lingüística, opera como un continente en sí mismo dentro de América Latina. 
+                        Brasil, por su escala demográfica y su entorno lusófono, presenta dinámicas editoriales que resultan interesantes al contrastarlas con la región hispanohablante. Este análisis compara directamente el volumen de publicaciones traducidas en Brasil frente al total del resto de los países latinoamericanos combinados.
                         <br><br>
-                        Esta divergencia compara directamente la voracidad traductora de Brasil frente al resto de los países latinoamericanos combinados. Al diseccionar las obras por idioma de origen, se expone un contraste fascinante: la marcada dependencia (o independencia) del inglés, y cómo las lenguas periféricas logran permear las fronteras de ambos mercados editoriales.
+                        Para facilitar esta comparación, el gráfico de barras divergentes ubica el <strong>idioma original</strong> de la obra en el eje vertical central. A partir del centro, el eje horizontal contabiliza la <strong>cantidad de publicaciones</strong>: hacia la derecha (en azul) se observa el volumen editado en Brasil, y hacia la izquierda (en violeta) el del resto de Latinoamérica. Seleccione un género en el menú desplegable para descubrir las dinámicas de traducción en subcategorías específicas.
                     </p>
+                    
                     <div class="filter-container">
                         <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Género Literario (Dewey):</label>
                         <select id="filtroGeneroVis8" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
                             <option value="TODOS">Todos los géneros literarios</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
                 <div class="col-lg-7 reveal">
@@ -210,9 +207,6 @@
     </section>
 
     <script>
-        // ---------------------------------------------------------
-        // 1. MOTOR DE ANIMACIÓN AL HACER SCROLL (Fade-In suave)
-        // ---------------------------------------------------------
         function reveal() {
             var reveals = document.querySelectorAll(".reveal");
             for (var i = 0; i < reveals.length; i++) {
@@ -225,44 +219,49 @@
             }
         }
         window.addEventListener("scroll", reveal);
-        reveal(); // Llamada inicial
+        reveal();
+
+        const axisTextStyle = { fontFamily: 'Lora', color: '#17142B', fontStyle: 'italic' };
 
         // ---------------------------------------------------------
-        // 2. LÓGICA DE VISUALIZACIÓN 1 (Barras Apiladas / Filtro Año)
+        // VISUALIZACIÓN 1
         // ---------------------------------------------------------
         var chart1 = echarts.init(document.getElementById('vis1'));
         var rawDataV1 = [];
 
         function renderVis1(yearFilter) {
             let filteredData = rawDataV1;
-            if(yearFilter !== 'TODOS') {
-                filteredData = rawDataV1.filter(d => d.ANO === yearFilter);
-            }
+            if(yearFilter !== 'TODOS') filteredData = rawDataV1.filter(d => d.ANO === yearFilter);
 
             let countries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO').sort();
-            
-            let comerciales = [];
-            let universitarias = [];
+            let comerciales = [], universitarias = [];
 
             countries.forEach(pais => {
                 let sumC = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL COMERCIAL')
                                        .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
                 let sumU = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL UNIVERSITARIA')
                                        .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                comerciales.push(sumC);
-                universitarias.push(sumU);
+                comerciales.push(sumC); universitarias.push(sumU);
             });
 
             var option = {
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 legend: { data: ['Comercial', 'Universitaria'], bottom: 0, textStyle: { fontFamily: 'Lora', color: '#817BA6' } },
-                grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
-                xAxis: { type: 'category', data: countries, axisLabel: { interval: 0, rotate: 45, fontFamily: 'Inter', color: '#17142B', fontSize: 10 } },
-                yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f0f0f0' } } },
-                color: ['#006DF7', '#1F0F80'], // Paleta de colores solicitada
+                grid: { left: '10%', right: '5%', bottom: '22%', top: '5%' },
+                xAxis: { 
+                    type: 'category', data: countries, 
+                    name: 'País de Publicación', nameLocation: 'middle', nameGap: 50, nameTextStyle: axisTextStyle,
+                    axisLabel: { interval: 0, rotate: 45, fontFamily: 'Inter', fontSize: 10 } 
+                },
+                yAxis: { 
+                    type: 'value', 
+                    name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 60, nameTextStyle: axisTextStyle,
+                    splitLine: { lineStyle: { color: '#f0f0f0' } } 
+                },
+                color: ['#006DF7', '#1F0F80'],
                 series: [
-                    { name: 'Comercial', type: 'bar', stack: 'total', itemStyle: { borderRadius: [0, 0, 0, 0] }, data: comerciales },
-                    { name: 'Universitaria', type: 'bar', stack: 'total', itemStyle: { borderRadius: [5, 5, 0, 0] }, data: universitarias }
+                    { name: 'Comercial', type: 'bar', stack: 'total', data: comerciales },
+                    { name: 'Universitaria', type: 'bar', stack: 'total', itemStyle: { borderRadius: [3, 3, 0, 0] }, data: universitarias }
                 ]
             };
             chart1.setOption(option);
@@ -272,23 +271,16 @@
             download: true, header: true,
             complete: function(results) {
                 rawDataV1 = results.data;
-                
-                // Llenar el dropdown de años
                 let selectAno = document.getElementById('filtroAnoVis1');
                 let anos = [...new Set(rawDataV1.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO' && a >= '2010' && a <= '2025').sort().reverse();
-                anos.forEach(a => {
-                    let opt = document.createElement('option');
-                    opt.value = a; opt.innerHTML = a;
-                    selectAno.appendChild(opt);
-                });
-
+                anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
                 selectAno.addEventListener('change', (e) => renderVis1(e.target.value));
                 renderVis1('TODOS');
             }
         });
 
         // ---------------------------------------------------------
-        // 3. LÓGICA DE VISUALIZACIÓN 4 (Áreas Apiladas - Dinámico)
+        // VISUALIZACIÓN 4
         // ---------------------------------------------------------
         var chart4 = echarts.init(document.getElementById('vis4'));
         
@@ -301,11 +293,8 @@
                 let idiomasTotales = {};
                 data.forEach(d => {
                     let idioma = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
-                    if(idioma && idioma !== 'SIN DATO') {
-                        idiomasTotales[idioma] = (idiomasTotales[idioma] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
-                    }
+                    if(idioma && idioma !== 'SIN DATO') { idiomasTotales[idioma] = (idiomasTotales[idioma] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); }
                 });
-                // Tomar los 6 idiomas más traducidos
                 let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 6);
 
                 let seriesData = topIdiomas.map(idioma => {
@@ -313,20 +302,24 @@
                         return data.filter(d => d.ANO === year && d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idioma)
                                    .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
                     });
-                    return {
-                        name: idioma, type: 'line', stack: 'Total', smooth: true,
-                        areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' },
-                        data: dataPorAno
-                    };
+                    return { name: idioma, type: 'line', stack: 'Total', smooth: true, areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, data: dataPorAno };
                 });
 
                 var option4 = {
                     tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#17142B' } } },
                     legend: { data: topIdiomas, bottom: 0, textStyle: { fontFamily: 'Lora' } },
-                    grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
+                    grid: { left: '10%', right: '5%', bottom: '22%', top: '5%' },
                     color: ['#1F0F80', '#006DF7', '#817BA6', '#17142B', '#A09CBE', '#333333'],
-                    xAxis: [{ type: 'category', boundaryGap: false, data: years, axisLabel: {fontFamily: 'Inter'} }],
-                    yAxis: [{ type: 'value', splitLine: { lineStyle: { color: '#f0f0f0' } } }],
+                    xAxis: [{ 
+                        type: 'category', boundaryGap: false, data: years, 
+                        name: 'Año de Publicación', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
+                        axisLabel: {fontFamily: 'Inter'} 
+                    }],
+                    yAxis: [{ 
+                        type: 'value', 
+                        name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 60, nameTextStyle: axisTextStyle,
+                        splitLine: { lineStyle: { color: '#f0f0f0' } } 
+                    }],
                     series: seriesData
                 };
                 chart4.setOption(option4);
@@ -334,32 +327,24 @@
         });
 
         // ---------------------------------------------------------
-        // 4. LÓGICA DE VISUALIZACIÓN 8 (Barras Divergentes Brasil vs LATAM)
+        // VISUALIZACIÓN 8
         // ---------------------------------------------------------
         var chart8 = echarts.init(document.getElementById('vis8'));
         var rawDataV8 = [];
 
         function renderVis8(generoFilter) {
             let filteredData = rawDataV8;
-            if(generoFilter !== 'TODOS') {
-                filteredData = rawDataV8.filter(d => d['SUBCATEGORIA.DEWEY'] === generoFilter);
-            }
+            if(generoFilter !== 'TODOS') filteredData = rawDataV8.filter(d => d['SUBCATEGORIA.DEWEY'] === generoFilter);
 
-            // Identificar los 8 idiomas de origen más fuertes en la selección actual
             let idiomasTotales = {};
             filteredData.forEach(d => {
                 let idm = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
-                if(idm && idm !== 'SIN DATO') {
-                    idiomasTotales[idm] = (idiomasTotales[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
-                }
+                if(idm && idm !== 'SIN DATO') { idiomasTotales[idm] = (idiomasTotales[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); }
             });
             let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 8);
-            
-            // Para gráfico de tornado, invertimos el eje Y para leer de arriba a abajo
             topIdiomas.reverse(); 
 
-            let dataBrasil = [];
-            let dataResto = [];
+            let dataBrasil = [], dataResto = [];
 
             topIdiomas.forEach(idm => {
                 let sumB = filteredData.filter(d => d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && d.REGION_BRASIL_LATAM === 'BRASIL')
@@ -367,9 +352,7 @@
                 let sumR = filteredData.filter(d => d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && d.REGION_BRASIL_LATAM === 'RESTO DE LATAM')
                                        .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
                 
-                // Brasil va en positivo, Resto de Latam lo ponemos en negativo para que vaya hacia la izquierda
-                dataBrasil.push(sumB);
-                dataResto.push(-Math.abs(sumR)); 
+                dataBrasil.push(sumB); dataResto.push(-Math.abs(sumR)); 
             });
 
             var option8 = {
@@ -382,13 +365,21 @@
                     }
                 },
                 legend: { data: ['RESTO DE LATAM', 'BRASIL'], bottom: 0, textStyle: { fontFamily: 'Lora' } },
-                grid: { left: '3%', right: '4%', bottom: '10%', top: '5%', containLabel: true },
-                xAxis: [ { type: 'value', axisLabel: { formatter: (val) => Math.abs(val) } } ], // Oculta el signo negativo
-                yAxis: [ { type: 'category', axisTick: { show: false }, data: topIdiomas, axisLabel: {fontFamily: 'Inter', fontWeight: 'bold'} } ],
+                grid: { left: '20%', right: '5%', bottom: '20%', top: '5%' },
+                xAxis: [ { 
+                    type: 'value', 
+                    name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
+                    axisLabel: { formatter: (val) => Math.abs(val) } 
+                } ], 
+                yAxis: [ { 
+                    type: 'category', axisTick: { show: false }, data: topIdiomas, 
+                    name: 'Idioma Original', nameLocation: 'middle', nameGap: 100, nameTextStyle: axisTextStyle,
+                    axisLabel: {fontFamily: 'Inter', fontWeight: 'bold'} 
+                } ],
                 color: ['#817BA6', '#006DF7'],
                 series: [
-                    { name: 'RESTO DE LATAM', type: 'bar', stack: 'Total', emphasis: { focus: 'series' }, data: dataResto },
-                    { name: 'BRASIL', type: 'bar', stack: 'Total', emphasis: { focus: 'series' }, data: dataBrasil }
+                    { name: 'RESTO DE LATAM', type: 'bar', stack: 'Total', data: dataResto },
+                    { name: 'BRASIL', type: 'bar', stack: 'Total', itemStyle: { borderRadius: [0, 3, 3, 0] }, data: dataBrasil }
                 ]
             };
             chart8.setOption(option8);
@@ -398,25 +389,19 @@
             download: true, header: true,
             complete: function(results) {
                 rawDataV8 = results.data;
-                
-                // Llenar el dropdown de géneros
                 let selectGenero = document.getElementById('filtroGeneroVis8');
                 let generos = [...new Set(rawDataV8.map(d => d['SUBCATEGORIA.DEWEY']))].filter(g => g && g !== 'SIN DATO').sort();
                 generos.forEach(g => {
                     let opt = document.createElement('option');
-                    opt.value = g; opt.innerHTML = g.length > 30 ? g.substring(0,30) + '...' : g; // Acortar textos muy largos
+                    opt.value = g; opt.innerHTML = g.length > 30 ? g.substring(0,30) + '...' : g;
                     selectGenero.appendChild(opt);
                 });
-
                 selectGenero.addEventListener('change', (e) => renderVis8(e.target.value));
                 renderVis8('TODOS');
             }
         });
 
-        // Hacer todo responsivo
-        window.addEventListener('resize', function() {
-            chart1.resize(); chart4.resize(); chart8.resize();
-        });
+        window.addEventListener('resize', function() { chart1.resize(); chart4.resize(); chart8.resize(); });
     </script>
 </body>
 </html>
