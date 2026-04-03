@@ -364,27 +364,42 @@
     </section>
 
     
-    <section class="visualization-section">
+    <section id="seccionVis8" class="visualization-section reveal">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-lg-5 reveal delay-text">
-                    <h2 class="chart-title">El Gigante Lusófono frente a la Región Hispanohablante</h2>
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">Divergencias Editoriales: El Gigante Luso frente a la Región</h2>
                     <p class="chart-description">
-                        Brasil, por su escala demográfica y su entorno lusófono, presenta dinámicas editoriales que resultan interesantes al contrastarlas con la región hispanohablante. Este análisis compara directamente el volumen de publicaciones traducidas en Brasil frente al total del resto de los países latinoamericanos combinados.
+                        Brasil y el bloque hispanohablante operan bajo lógicas de traducción distintas. Este gráfico de barras divergentes permite comparar directamente el volumen de publicaciones de Brasil frente al resto de Latinoamérica, segmentado por el idioma original de las obras.
                         <br><br>
-                        Para facilitar esta comparación, el gráfico de barras divergentes ubica el <strong>idioma original</strong> de la obra en el eje vertical central. A partir del centro, el eje horizontal contabiliza la <strong>cantidad de publicaciones</strong>: hacia la derecha (en azul) se observa el volumen editado en Brasil, y hacia la izquierda (en violeta) el del resto de Latinoamérica. Seleccione un género en el menú desplegable para descubrir las dinámicas de traducción en subcategorías específicas.
+                        El eje vertical central presenta una lista dinámica de los <strong>idiomas de origen más influyentes</strong> (calculada a partir de los 10 más frecuentes en cada región para asegurar representatividad). Hacia la derecha (en azul) se observa el volumen de Brasil, y hacia la izquierda (en violeta) el del resto del continente.
+                        <br><br>
+                        <em>Interacción:</em> Ajuste los filtros de <strong>Año</strong> y <strong>Género</strong> para observar cómo cambian los idiomas protagonistas. <strong>Posicione el cursor sobre cualquier barra</strong> para inspeccionar el <strong>Top 5 de grupos editoriales</strong> y el <strong>Top 5 de temáticas específicas</strong> que integran ese flujo.
                     </p>
                     
                     <div class="filter-container">
-                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Género Literario (Dewey):</label>
-                        <select id="filtroGeneroVis8" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
-                            <option value="TODOS">Todos los géneros literarios</option>
-                        </select>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año:</label>
+                                <select id="filtroAnoVis8" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Periodo Histórico (Total)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Género (Dewey):</label>
+                                <select id="filtroGeneroVis8" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Todos los géneros literarios</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-7 reveal">
-                    <div id="vis8" class="chart-container"></div>
+
+                <div class="col-lg-7">
+                    <div id="vis8" class="chart-container" style="height: 600px;"></div>
                 </div>
+
             </div>
         </div>
     </section>
@@ -1408,77 +1423,145 @@
         Papa.parse('data/Cruce_10_Flujo_Portugues_a_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV7.pt_esp = r.data; checkLoadV7(); } });
         
         // ---------------------------------------------------------
-        // VISUALIZACIÓN 8
+        // LÓGICA DE VISUALIZACIÓN 8 (Tornado Chart Dinámico)
         // ---------------------------------------------------------
         var chart8 = echarts.init(document.getElementById('vis8'));
         var rawDataV8 = [];
 
-        function renderVis8(generoFilter) {
-            let filteredData = rawDataV8;
-            if(generoFilter !== 'TODOS') filteredData = rawDataV8.filter(d => d['SUBCATEGORIA.DEWEY'] === generoFilter);
+        function renderVis8() {
+            let yearFilter = document.getElementById('filtroAnoVis8').value;
+            let genreFilter = document.getElementById('filtroGeneroVis8').value;
 
-            let idiomasTotales = {};
+            let filteredData = rawDataV8;
+            if(yearFilter !== 'TODOS') filteredData = filteredData.filter(d => d.ANO === yearFilter);
+            if(genreFilter !== 'TODOS') filteredData = filteredData.filter(d => d['SUBCATEGORIA.DEWEY'] === genreFilter);
+
+            // 1. Determinar el Top 10 de Idiomas para cada región (Excluyendo SIN IDENTIFICAR)
+            let countsBrasil = {}, countsResto = {};
+            
             filteredData.forEach(d => {
                 let idm = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
-                if(idm && idm !== 'SIN DATO') { idiomasTotales[idm] = (idiomasTotales[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); }
+                let reg = d.REGION_BRASIL_LATAM;
+                let val = parseInt(d.CANTIDAD_REGISTROS || 0);
+                if(idm && idm !== 'SIN DATO' && idm !== 'SIN IDENTIFICAR') {
+                    if(reg === 'BRASIL') countsBrasil[idm] = (countsBrasil[idm] || 0) + val;
+                    else countsResto[idm] = (countsResto[idm] || 0) + val;
+                }
             });
-            let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 8);
-            topIdiomas.reverse(); 
+
+            let topBrasil = Object.keys(countsBrasil).sort((a,b) => countsBrasil[b] - countsBrasil[a]).slice(0, 10);
+            let topResto = Object.keys(countsResto).sort((a,b) => countsResto[b] - countsResto[a]).slice(0, 10);
+            
+            // Unión de ambos Top 10 (Set elimina repetidos)
+            let idiomasFinales = [...new Set([...topBrasil, ...topResto])].sort((a, b) => {
+                let totalA = (countsBrasil[a] || 0) + (countsResto[a] || 0);
+                let totalB = (countsBrasil[b] || 0) + (countsResto[b] || 0);
+                return totalA - totalB; // Orden para que el mayor quede arriba en barras horizontales
+            });
 
             let dataBrasil = [], dataResto = [];
 
-            topIdiomas.forEach(idm => {
-                let sumB = filteredData.filter(d => d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && d.REGION_BRASIL_LATAM === 'BRASIL')
-                                       .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                let sumR = filteredData.filter(d => d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && d.REGION_BRASIL_LATAM === 'RESTO DE LATAM')
-                                       .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                
-                dataBrasil.push(sumB); dataResto.push(-Math.abs(sumR)); 
+            idiomasFinales.forEach(idm => {
+                dataBrasil.push(countsBrasil[idm] || 0);
+                dataResto.push(-(countsResto[idm] || 0)); // Negativo para el lado izquierdo
             });
 
             var option8 = {
                 tooltip: { 
-                    trigger: 'axis', axisPointer: { type: 'shadow' },
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
                     formatter: function(params) {
-                        return params[0].name + '<br/>' +
-                               params[0].seriesName + ': ' + Math.abs(params[0].value) + '<br/>' +
-                               params[1].seriesName + ': ' + Math.abs(params[1].value);
+                        let idm = params.name;
+                        let region = params.seriesName; // 'BRASIL' o 'RESTO DE LATAM'
+                        let totalBarra = Math.abs(params.value);
+                        
+                        // Filtrar subconjunto exacto para el Tooltip
+                        let subData = filteredData.filter(d => 
+                            d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && 
+                            d.REGION_BRASIL_LATAM === region
+                        );
+
+                        // Calcular Top 5 Editoriales
+                        let edits = {};
+                        subData.forEach(d => {
+                            let e = d.GRUPO_EDITORIAL_COMPLETO;
+                            if(e && e !== 'SIN DATO') edits[e] = (edits[e] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                        });
+                        let topEdits = Object.keys(edits).map(k=>({n:k, c:edits[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
+
+                        // Calcular Top 5 Subcategorías Dewey
+                        let deweys = {};
+                        subData.forEach(d => {
+                            let dw = d['SUBCATEGORIA.DEWEY'];
+                            if(dw && dw !== 'SIN DATO') deweys[dw] = (deweys[dw] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                        });
+                        let topDeweys = Object.keys(deweys).map(k=>({n:k, c:deweys[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:11px; min-width:260px;">`;
+                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:8px;padding-bottom:4px;">${idm} ➔ ${region}</strong>`;
+                        h += `Total: <b>${totalBarra}</b> publicaciones<br><br>`;
+                        
+                        // Sección Editoriales
+                        if(topEdits.length > 0) {
+                            h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Grupos Editoriales:</span><br>`;
+                            topEdits.forEach((e,i) => {
+                                let pct = ((e.c / totalBarra) * 100).toFixed(1);
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${e.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
+                            });
+                        }
+
+                        // Sección Dewey (Solo si no hay un género ya seleccionado en el filtro)
+                        if(topDeweys.length > 0 && genreFilter === 'TODOS') {
+                            h += `<br><span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas (Dewey):</span><br>`;
+                            topDeweys.forEach((dw,i) => {
+                                let pct = ((dw.c / totalBarra) * 100).toFixed(1);
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dw.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
+                            });
+                        }
+                        
+                        h += `</div>`;
+                        return h;
                     }
                 },
                 legend: { data: ['RESTO DE LATAM', 'BRASIL'], bottom: 0, textStyle: { fontFamily: 'Lora' } },
-                grid: { left: '20%', right: '5%', bottom: '20%', top: '5%' },
-                xAxis: [ { 
+                grid: { left: '20%', right: '10%', bottom: '15%', top: '5%' },
+                xAxis: { 
                     type: 'value', 
-                    name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
-                    axisLabel: { formatter: (val) => Math.abs(val) } 
-                } ], 
-                yAxis: [ { 
-                    type: 'category', axisTick: { show: false }, data: topIdiomas, 
-                    name: 'Idioma Original', nameLocation: 'middle', nameGap: 100, nameTextStyle: axisTextStyle,
-                    axisLabel: {fontFamily: 'Inter', fontWeight: 'bold'} 
-                } ],
+                    name: 'Publicaciones', nameLocation: 'middle', nameGap: 30, nameTextStyle: axisTextStyle,
+                    axisLabel: { formatter: (val) => Math.abs(val) },
+                    splitLine: { lineStyle: { color: '#f0f0f0' } }
+                }, 
+                yAxis: { 
+                    type: 'category', axisTick: { show: false }, data: idiomasFinales, 
+                    axisLabel: { fontFamily: 'Inter', fontWeight: 'bold', fontSize: 10 } 
+                },
                 color: ['#817BA6', '#006DF7'],
                 series: [
-                    { name: 'RESTO DE LATAM', type: 'bar', stack: 'Total', data: dataResto },
-                    { name: 'BRASIL', type: 'bar', stack: 'Total', itemStyle: { borderRadius: [0, 3, 3, 0] }, data: dataBrasil }
+                    { name: 'RESTO DE LATAM', type: 'bar', stack: 'Total', data: dataResto, itemStyle: { borderRadius: [3, 0, 0, 3] } },
+                    { name: 'BRASIL', type: 'bar', stack: 'Total', data: dataBrasil, itemStyle: { borderRadius: [0, 3, 3, 0] } }
                 ]
             };
-            chart8.setOption(option8);
+            chart8.setOption(option8, true);
         }
 
         Papa.parse('data/Cruce_12_Brasil_vs_LATAM.csv', {
             download: true, header: true,
             complete: function(results) {
                 rawDataV8 = results.data;
+                
+                // Llenar Filtro de Año
+                let selectAno = document.getElementById('filtroAnoVis8');
+                let anos = [...new Set(rawDataV8.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO').sort().reverse();
+                anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
+
+                // Llenar Filtro de Género
                 let selectGenero = document.getElementById('filtroGeneroVis8');
                 let generos = [...new Set(rawDataV8.map(d => d['SUBCATEGORIA.DEWEY']))].filter(g => g && g !== 'SIN DATO').sort();
-                generos.forEach(g => {
-                    let opt = document.createElement('option');
-                    opt.value = g; opt.innerHTML = g.length > 30 ? g.substring(0,30) + '...' : g;
-                    selectGenero.appendChild(opt);
-                });
-                selectGenero.addEventListener('change', (e) => renderVis8(e.target.value));
-                renderVis8('TODOS');
+                generos.forEach(g => { let opt = document.createElement('option'); opt.value = g; opt.innerHTML = g.length > 30 ? g.substring(0,30) + '...' : g; selectGenero.appendChild(opt); });
+
+                selectAno.addEventListener('change', renderVis8);
+                selectGenero.addEventListener('change', renderVis8);
+                renderVis8();
             }
         });
 
