@@ -207,9 +207,9 @@
                     <p class="chart-description">
                         El ecosistema editorial latinoamericano orbita alrededor de tres lenguas pivotales: el inglés, el portugués y el español. Analizar la dirección de estos flujos permite entender tanto la dependencia cultural externa como los puentes intrarregionales.
                         <br><br>
-                        El siguiente gráfico de barras clasifica a los <strong>países</strong> según el volumen de obras para el escenario lingüístico seleccionado. 
+                        El siguiente gráfico clasifica los <strong>países de publicación</strong> según su volumen de traducción para el escenario lingüístico seleccionado. 
                         <br><br>
-                        <em>Interacción:</em> Alterne el menú de "Escenario" para cambiar el enfoque lingüístico. Utilice la <strong>barra de desplazamiento lateral</strong> en la gráfica para navegar por todos los países, incluso aquellos con menor volumen. <strong>Haga clic sobre la barra de cualquier país</strong> para revelar a la izquierda su <strong>Top 5 de Géneros Literarios</strong> y descubrir las editoriales detrás de ellos.
+                        <em>Interacción:</em> Utilice la barra de desplazamiento lateral en el gráfico para explorar todos los países, sin importar cuán pequeño sea su volumen. <strong>Haga clic sobre la barra de cualquier país</strong> para revelar a la izquierda el <strong>Top 5 de Géneros Literarios</strong> y sus editoriales protagónicas. Al posicionar el cursor sobre los países, descubrirá también los principales idiomas involucrados en ese flujo específico.
                     </p>
                     
                     <div class="filter-container">
@@ -561,7 +561,7 @@
 
 
         // ---------------------------------------------------------
-        // LÓGICA DE VISUALIZACIÓN 3 (Treemap + Drilldown Top 5)
+        // LÓGICA DE VISUALIZACIÓN 3 (Barras Horizontales Scroll + Drilldown)
         // ---------------------------------------------------------
         var chart3_main = echarts.init(document.getElementById('vis3_main'));
         var chart3_detail = echarts.init(document.getElementById('vis3_detail'));
@@ -588,49 +588,85 @@
                 filteredData = activeData.filter(d => d.ANO === yearFilter);
             }
 
-            let countries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO').sort();
-            let treemapData = [];
-
-            // Recopilamos datos y los ordenamos de menor a mayor (para que ECharts los dibuje de mayor a menor de arriba hacia abajo)
-            let countriesData = [];
-            countries.forEach(pais => {
-                let sum = filteredData.filter(d => d.PAIS === pais).reduce((acc, row) => acc + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                if(sum > 0) countriesData.push({ name: pais, value: sum });
+            // Agrupar por país
+            let countryTotals = {};
+            filteredData.forEach(d => {
+                let pais = d.PAIS;
+                if(pais && pais !== 'SIN DATO') {
+                    countryTotals[pais] = (countryTotals[pais] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                }
             });
+
+            // Convertir a array y ordenar de menor a mayor (ECharts dibuja de abajo hacia arriba)
+            let sortedCountries = Object.keys(countryTotals).map(k => ({ name: k, value: countryTotals[k] })).sort((a, b) => a.value - b.value);
             
-            countriesData.sort((a, b) => a.value - b.value);
-            
-            let yAxisCountries = countriesData.map(d => d.name);
-            let seriesData = countriesData.map(d => d.value);
+            let cNames = sortedCountries.map(c => c.name);
+            let cValues = sortedCountries.map(c => c.value);
+
+            // Calcular índices para mostrar solo el Top 12 por defecto en el scroll
+            let startIdx = Math.max(0, cNames.length - 12);
+            let endIdx = Math.max(0, cNames.length - 1);
 
             var optionMain = {
                 tooltip: { 
-                    trigger: 'axis', axisPointer: { type: 'shadow' },
-                    formatter: "<b>{b}</b><br/>{c} obras literarias<br><span style='font-size:0.85em;color:#817BA6;'><i>Clic para analizar géneros</i></span>"
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    formatter: function(params) {
+                        let pais = params.name;
+                        // Determinar la columna a buscar según el escenario
+                        let colIdioma = (flujo === 'espanol') ? 'IDIOMA.DEL.ESTANDARIZADO.COMPLETO' : 'IDIOMA.ESTANDARIZADO.COMPLETO';
+                        let tituloIdioma = (flujo === 'espanol') ? 'Idiomas Originales' : 'Idiomas de Destino';
+
+                        let countryData = filteredData.filter(d => d.PAIS === pais);
+                        
+                        let idiomas = {};
+                        let idiomaEncontrado = false;
+                        countryData.forEach(d => {
+                            let idm = d[colIdioma];
+                            if(idm && idm !== 'SIN DATO' && typeof idm !== 'undefined') {
+                                idiomas[idm] = (idiomas[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                                idiomaEncontrado = true;
+                            }
+                        });
+
+                        let topIdiomas = Object.keys(idiomas).map(k => ({n:k, c:idiomas[k]})).sort((a,b)=>b.c - a.c).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:220px;">`;
+                        h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.2em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">${pais}</strong>`;
+                        h += `Volumen Total: <b>${params.value}</b> obras<br>`;
+                        h += `<span style='font-size:0.85em;color:#817BA6;'><i>Clic para analizar géneros</i></span><br><br>`;
+
+                        if(idiomaEncontrado && topIdiomas.length > 0) {
+                            h += `<span style="color:#1F0F80;font-weight:bold;font-size:10px;text-transform:uppercase;">Top 5 ${tituloIdioma}:</span><br/>`;
+                            topIdiomas.forEach((e,i) => {
+                                h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${e.n} <span style="color:#817BA6">(${e.c})</span></span>`;
+                            });
+                        } else {
+                            h += `<span style="color:#817BA6;font-size:0.9em;font-style:italic;">(Datos de idioma no disponibles en el resumen actual)</span>`;
+                        }
+                        h += `</div>`;
+                        return h;
+                    }
                 },
-                grid: { left: '20%', right: '10%', bottom: '15%', top: '5%' },
-                xAxis: { 
-                    type: 'value', 
-                    axisLabel: { fontFamily: 'Inter', fontSize: 10 },
-                    splitLine: { lineStyle: { color: '#f0f0f0' } }
-                },
-                yAxis: { 
-                    type: 'category', data: yAxisCountries, 
-                    axisLabel: { fontFamily: 'Inter', fontSize: 10, fontWeight: 'bold' },
-                    axisTick: { show: false }, axisLine: { show: false }
-                },
-                // ¡Aquí está la magia! Una barra de scroll dinámica
+                grid: { left: '5%', right: '12%', bottom: '5%', top: '5%', containLabel: true },
+                xAxis: { type: 'value', splitLine: { lineStyle: { color: '#f0f0f0' } } },
+                yAxis: { type: 'category', data: cNames, axisLabel: { fontFamily: 'Inter', fontSize: 11, fontWeight: 'bold' } },
                 dataZoom: [
-                    { type: 'slider', yAxisIndex: 0, width: 12, right: 0, start: 0, end: 100, borderColor: 'transparent', fillerColor: '#A09CBE', showDetail: false }
+                    { type: 'slider', yAxisIndex: 0, right: 0, width: 12, startValue: startIdx, endValue: endIdx, borderColor: 'transparent', handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z' },
+                    { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: false, moveOnMouseWheel: true }
                 ],
+                color: ['#1F0F80'],
                 series: [{
-                    type: 'bar', data: seriesData,
-                    itemStyle: { color: '#1F0F80', borderRadius: [0, 3, 3, 0] },
+                    type: 'bar', data: cValues,
+                    itemStyle: { borderRadius: [0, 4, 4, 0] },
                     emphasis: { itemStyle: { color: '#006DF7' } }
                 }]
             };
             chart3_main.setOption(optionMain, true);
 
+            // ==========================================
+            // LÓGICA DEL CLIC (Drilldown Géneros)
+            // ==========================================
             chart3_main.off('click');
             chart3_main.on('click', function (params) {
                 let paisSeleccionado = params.name;
@@ -655,7 +691,7 @@
                 let generoCounts = topGeneros.map(g => g.cantidad);
 
                 var optionDetail = {
-                    title: { text: `Top Géneros: ${paisSeleccionado}`, textStyle: { fontFamily: 'Playfair Display', fontSize: 13, color: '#1F0F80' }, left: 'center', top: '0%' },
+                    title: { text: `Top 5 Géneros: ${paisSeleccionado}`, textStyle: { fontFamily: 'Playfair Display', fontSize: 13, color: '#1F0F80' }, left: 'center', top: '0%' },
                     tooltip: {
                         trigger: 'item',
                         backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
@@ -685,10 +721,10 @@
                             return h;
                         }
                     },
-                    grid: { left: '5%', right: '15%', bottom: '10%', top: '15%', containLabel: true },
+                    grid: { left: '5%', right: '15%', bottom: '5%', top: '15%', containLabel: true },
                     xAxis: { type: 'value', show: false },
                     yAxis: { type: 'category', data: generoNames, axisTick: {show: false}, axisLine: {show: false}, axisLabel: { fontFamily: 'Inter', fontSize: 10, formatter: function (val) { return val.length > 15 ? val.substring(0, 13) + '..' : val; } } },
-                    color: ['#1F0F80'],
+                    color: ['#006DF7'],
                     series: [{ type: 'bar', data: generoCounts, itemStyle: { borderRadius: [0, 4, 4, 0] }, label: { show: true, position: 'right', fontFamily: 'Inter', fontSize: 11, color: '#17142B', fontWeight: 'bold' } }]
                 };
                 chart3_detail.setOption(optionDetail);
