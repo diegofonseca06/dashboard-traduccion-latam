@@ -207,9 +207,9 @@
                     <p class="chart-description">
                         El ecosistema editorial latinoamericano orbita alrededor de tres lenguas pivotales: el inglés, el portugués y el español. Analizar la dirección de estos flujos permite entender tanto la dependencia cultural externa como los puentes intrarregionales.
                         <br><br>
-                        El siguiente <strong>Mapa de Árbol (Treemap)</strong> representa el volumen de obras según el escenario lingüístico que usted seleccione. Cada rectángulo es un <strong>país</strong>; a mayor área, mayor es la cantidad de publicaciones literarias procesadas en ese territorio.
+                        El siguiente gráfico de barras clasifica a los <strong>países</strong> según el volumen de obras para el escenario lingüístico seleccionado. 
                         <br><br>
-                        <em>Interacción:</em> Alterne el menú de "Escenario" para cambiar el enfoque lingüístico. <strong>Haga clic sobre cualquier país</strong> para revelar a la izquierda el <strong>Top 5 de Géneros Literarios</strong>. Al posicionar el cursor sobre estas nuevas barras, identificará el <strong>Top 5 de grupos editoriales</strong> detrás de dichas traducciones.
+                        <em>Interacción:</em> Alterne el menú de "Escenario" para cambiar el enfoque lingüístico. Utilice la <strong>barra de desplazamiento lateral</strong> en la gráfica para navegar por todos los países, incluso aquellos con menor volumen. <strong>Haga clic sobre la barra de cualquier país</strong> para revelar a la izquierda su <strong>Top 5 de Géneros Literarios</strong> y descubrir las editoriales detrás de ellos.
                     </p>
                     
                     <div class="filter-container">
@@ -591,23 +591,42 @@
             let countries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO').sort();
             let treemapData = [];
 
+            // Recopilamos datos y los ordenamos de menor a mayor (para que ECharts los dibuje de mayor a menor de arriba hacia abajo)
+            let countriesData = [];
             countries.forEach(pais => {
-                let sum = filteredData.filter(d => d.PAIS === pais)
-                                      .reduce((acc, row) => acc + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                if(sum > 0) treemapData.push({ name: pais, value: sum });
+                let sum = filteredData.filter(d => d.PAIS === pais).reduce((acc, row) => acc + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
+                if(sum > 0) countriesData.push({ name: pais, value: sum });
             });
+            
+            countriesData.sort((a, b) => a.value - b.value);
+            
+            let yAxisCountries = countriesData.map(d => d.name);
+            let seriesData = countriesData.map(d => d.value);
 
             var optionMain = {
                 tooltip: { 
-                    trigger: 'item',
+                    trigger: 'axis', axisPointer: { type: 'shadow' },
                     formatter: "<b>{b}</b><br/>{c} obras literarias<br><span style='font-size:0.85em;color:#817BA6;'><i>Clic para analizar géneros</i></span>"
                 },
-                color: ['#1F0F80', '#006DF7', '#817BA6', '#A09CBE', '#17142B'],
+                grid: { left: '20%', right: '10%', bottom: '15%', top: '5%' },
+                xAxis: { 
+                    type: 'value', 
+                    axisLabel: { fontFamily: 'Inter', fontSize: 10 },
+                    splitLine: { lineStyle: { color: '#f0f0f0' } }
+                },
+                yAxis: { 
+                    type: 'category', data: yAxisCountries, 
+                    axisLabel: { fontFamily: 'Inter', fontSize: 10, fontWeight: 'bold' },
+                    axisTick: { show: false }, axisLine: { show: false }
+                },
+                // ¡Aquí está la magia! Una barra de scroll dinámica
+                dataZoom: [
+                    { type: 'slider', yAxisIndex: 0, width: 12, right: 0, start: 0, end: 100, borderColor: 'transparent', fillerColor: '#A09CBE', showDetail: false }
+                ],
                 series: [{
-                    type: 'treemap', data: treemapData,
-                    roam: false, nodeClick: false, breadcrumb: {show: false},
-                    label: { show: true, formatter: '{b}\n{c}', fontFamily: 'Inter', fontSize: 12 },
-                    itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }
+                    type: 'bar', data: seriesData,
+                    itemStyle: { color: '#1F0F80', borderRadius: [0, 3, 3, 0] },
+                    emphasis: { itemStyle: { color: '#006DF7' } }
                 }]
             };
             chart3_main.setOption(optionMain, true);
