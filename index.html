@@ -238,20 +238,32 @@
         </div>
     </section>
 
-    <section class="visualization-section bg-alternate">
+    <section class="visualization-section bg-alternate reveal">
         <div class="container">
-            <div class="row align-items-center flex-row-reverse">
-                <div class="col-lg-5 reveal delay-text">
+            <div class="row align-items-center">
+                
+                <div class="col-lg-5 delay-text">
                     <h2 class="chart-title">Las Voces Originales: Evolución Histórica de la Lengua</h2>
                     <p class="chart-description">
-                        La traducción literaria funciona como un mapa de intercambio cultural, revelando las lenguas de origen que nutren el catálogo latinoamericano. Al observar el periodo 2010-2025, es posible rastrear la diversidad de idiomas que componen este ecosistema a lo largo del tiempo.
+                        La traducción literaria funciona como un mapa de intercambio cultural, revelando las lenguas de origen que nutren el catálogo de la región. Al observar el periodo 2010-2025, es posible rastrear cómo la diversidad de estos idiomas se expande o se contrae.
                         <br><br>
-                        El gráfico de áreas apiladas ilustra esta evolución: el eje horizontal traza los <strong>años de publicación</strong>, y el eje vertical mide la <strong>cantidad de publicaciones</strong>. Cada franja de color corresponde a uno de los idiomas de origen más frecuentes; el grosor de la franja refleja el volumen de libros traducidos desde ese idioma en un año determinado. Puede pasar el cursor sobre las áreas para inspeccionar las cifras exactas de cada periodo.
+                        El siguiente gráfico de áreas apiladas ilustra esta evolución mostrando los <strong>10 idiomas originales más frecuentes</strong> (excluyendo aquellos sin identificar). El grosor de cada franja refleja el volumen de obras literarias traducidas desde ese idioma en un año determinado.
+                        <br><br>
+                        <em>Interacción:</em> Utilice el menú desplegable para seleccionar un <strong>país de publicación</strong>. El gráfico recalculará automáticamente cuáles fueron los 10 idiomas predominantes para ese territorio a lo largo de la década. Pase el cursor sobre el gráfico para examinar las cifras exactas año por año.
                     </p>
+                    
+                    <div class="filter-container">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por País de Publicación:</label>
+                        <select id="filtroPaisVis4" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                            <option value="TODOS">Todos los países (Continental)</option>
+                            </select>
+                    </div>
                 </div>
-                <div class="col-lg-7 reveal">
+
+                <div class="col-lg-7">
                     <div id="vis4" class="chart-container"></div>
                 </div>
+
             </div>
         </div>
     </section>
@@ -757,52 +769,117 @@
 
         
         // ---------------------------------------------------------
-        // VISUALIZACIÓN 4
+        // LÓGICA DE VISUALIZACIÓN 4 (Evolución de Idiomas - Dinámico)
         // ---------------------------------------------------------
         var chart4 = echarts.init(document.getElementById('vis4'));
+        var rawDataV4 = [];
         
+        // Ampliamos la paleta de colores para soportar 10 idiomas
+        const paletteV4 = ['#1F0F80', '#006DF7', '#817BA6', '#A09CBE', '#17142B', '#2C3E50', '#E74C3C', '#3498DB', '#95A5A6', '#7F8C8D'];
+
+        function renderVis4(paisFilter) {
+            let data = rawDataV4.filter(d => d.ANO && d.ANO >= '2010' && d.ANO <= '2025');
+            
+            // Aplicar filtro de país si no es "TODOS"
+            if (paisFilter !== 'TODOS') {
+                data = data.filter(d => d.PAIS === paisFilter);
+            }
+
+            let years = [...new Set(data.map(d => d.ANO))].sort();
+            
+            // Calcular el Top 10 de idiomas dinámicamente para el país seleccionado
+            let idiomasTotales = {};
+            data.forEach(d => {
+                let idioma = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
+                // Excluir vacíos y "SIN IDENTIFICAR"
+                if(idioma && idioma !== 'SIN DATO' && idioma !== 'SIN IDENTIFICAR') { 
+                    idiomasTotales[idioma] = (idiomasTotales[idioma] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); 
+                }
+            });
+            
+            // Extraer los 10 más fuertes
+            let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 10);
+
+            // Armar las series para el gráfico de áreas
+            let seriesData = topIdiomas.map(idioma => {
+                let dataPorAno = years.map(year => {
+                    return data.filter(d => d.ANO === year && d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idioma)
+                               .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
+                });
+                return { 
+                    name: idioma, type: 'line', stack: 'Total', smooth: true, 
+                    areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, 
+                    data: dataPorAno 
+                };
+            });
+
+            var option4 = {
+                tooltip: { 
+                    trigger: 'axis', 
+                    axisPointer: { type: 'cross', label: { backgroundColor: '#17142B' } },
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                    borderColor: '#1F0F80',
+                    textStyle: { color: '#17142B', fontFamily: 'Inter' },
+                    formatter: function (params) {
+                        // params[0].axisValue es el Año seleccionado en el eje X
+                        let h = `<div style="min-width: 180px;">`;
+                        h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.3em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">Año: ${params[0].axisValue}</strong>`;
+                        
+                        // Ordenar los valores del tooltip de mayor a menor para ese año específico
+                        let sortedParams = [...params].sort((a, b) => b.value - a.value);
+                        
+                        sortedParams.forEach(p => {
+                            if (p.value > 0) { // Solo mostrar idiomas que tuvieron traducciones ese año
+                                h += `<span style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                        <span><span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}</span>
+                                        <strong style="margin-left: 15px;">${p.value}</strong>
+                                      </span>`;
+                            }
+                        });
+                        h += `</div>`;
+                        return h;
+                    }
+                },
+                legend: { 
+                    data: topIdiomas, bottom: 0, type: 'scroll', // 'scroll' evita que la leyenda se desborde si son muchos
+                    textStyle: { fontFamily: 'Inter', fontSize: 11 } 
+                },
+                grid: { left: '8%', right: '5%', bottom: '25%', top: '5%' },
+                color: paletteV4,
+                xAxis: [{ 
+                    type: 'category', boundaryGap: false, data: years, 
+                    name: 'Año de Publicación', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
+                    axisLabel: {fontFamily: 'Inter'} 
+                }],
+                yAxis: [{ 
+                    type: 'value', 
+                    name: 'Obras Traducidas', nameLocation: 'middle', nameGap: 50, nameTextStyle: axisTextStyle,
+                    splitLine: { lineStyle: { color: '#f0f0f0' } } 
+                }],
+                series: seriesData
+            };
+            chart4.setOption(option4, true); // true para limpiar el gráfico anterior al cambiar de país
+        }
+
         Papa.parse('data/Cruce_05_Evolucion_Idiomas_Origen.csv', {
             download: true, header: true,
             complete: function(results) {
-                let data = results.data.filter(d => d.ANO && d.ANO >= '2010' && d.ANO <= '2025');
-                let years = [...new Set(data.map(d => d.ANO))].sort();
+                rawDataV4 = results.data;
                 
-                let idiomasTotales = {};
-                data.forEach(d => {
-                    let idioma = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
-                    if(idioma && idioma !== 'SIN DATO') { idiomasTotales[idioma] = (idiomasTotales[idioma] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); }
-                });
-                let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 6);
-
-                let seriesData = topIdiomas.map(idioma => {
-                    let dataPorAno = years.map(year => {
-                        return data.filter(d => d.ANO === year && d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idioma)
-                                   .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                    });
-                    return { name: idioma, type: 'line', stack: 'Total', smooth: true, areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, data: dataPorAno };
+                // Poblar el menú de Países
+                let selectPais = document.getElementById('filtroPaisVis4');
+                let paises = [...new Set(rawDataV4.map(d => d.PAIS))].filter(p => p && p !== 'SIN DATO').sort();
+                
+                paises.forEach(p => {
+                    let opt = document.createElement('option');
+                    opt.value = p; opt.innerHTML = p;
+                    selectPais.appendChild(opt);
                 });
 
-                var option4 = {
-                    tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#17142B' } } },
-                    legend: { data: topIdiomas, bottom: 0, textStyle: { fontFamily: 'Lora' } },
-                    grid: { left: '10%', right: '5%', bottom: '22%', top: '5%' },
-                    color: ['#1F0F80', '#006DF7', '#817BA6', '#17142B', '#A09CBE', '#333333'],
-                    xAxis: [{ 
-                        type: 'category', boundaryGap: false, data: years, 
-                        name: 'Año de Publicación', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
-                        axisLabel: {fontFamily: 'Inter'} 
-                    }],
-                    yAxis: [{ 
-                        type: 'value', 
-                        name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 60, nameTextStyle: axisTextStyle,
-                        splitLine: { lineStyle: { color: '#f0f0f0' } } 
-                    }],
-                    series: seriesData
-                };
-                chart4.setOption(option4);
+                selectPais.addEventListener('change', (e) => renderVis4(e.target.value));
+                renderVis4('TODOS'); // Carga inicial
             }
         });
-
         // ---------------------------------------------------------
         // VISUALIZACIÓN 8
         // ---------------------------------------------------------
