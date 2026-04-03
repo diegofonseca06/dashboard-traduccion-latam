@@ -146,7 +146,9 @@
                     <p class="chart-description">
                         La difusión de la literatura traducida se apoya en distintas infraestructuras editoriales a lo largo del continente. Este análisis explora cómo se distribuye el volumen de publicaciones entre las editoriales comerciales y las prensas universitarias.
                         <br><br>
-                        En el siguiente gráfico de barras apiladas, el eje horizontal representa el <strong>país de publicación</strong>, mientras que la altura en el eje vertical indica la <strong>cantidad total de publicaciones traducidas</strong>. Los colores distinguen el tipo de agente editorial, permitiendo observar su participación relativa en cada territorio. Utilice el menú desplegable inferior para explorar los datos en años específicos o visualizar el acumulado histórico.
+                        En el siguiente gráfico de barras apiladas, el eje horizontal representa el <strong>país de publicación</strong>, mientras que la altura en el eje vertical indica la <strong>cantidad total de publicaciones traducidas</strong>. Los colores distinguen el tipo de agente editorial, permitiendo observar su participación relativa en cada territorio.
+                        <br><br>
+                        <em>Interacción:</em> Posicione el cursor sobre cualquier segmento de las barras para desplegar un <strong>Top 5 de los grupos editoriales</strong> que lideran la traducción en ese país y sector. Utilice el menú inferior para observar cómo cambian estos actores en años específicos.
                     </p>
                     
                     <div class="filter-container">
@@ -245,7 +247,53 @@
             });
 
             var option = {
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                tooltip: { 
+                    trigger: 'item', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderColor: '#1F0F80',
+                    textStyle: { color: '#17142B' },
+                    formatter: function (params) {
+                        let pais = params.name;
+                        let tipoAgente = params.seriesName === 'Comercial' ? 'EDITORIAL COMERCIAL' : 'EDITORIAL UNIVERSITARIA';
+                        
+                        // Filtramos los datos exactos de ese país, agente y el año actualmente seleccionado
+                        let countryData = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === tipoAgente);
+                        
+                        // Agrupamos y contamos por Grupo Editorial
+                        let grupos = {};
+                        countryData.forEach(d => {
+                            let grupo = d.GRUPO_EDITORIAL_COMPLETO;
+                            if(grupo && grupo !== 'SIN DATO') {
+                                grupos[grupo] = (grupos[grupo] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                            }
+                        });
+                        
+                        // Ordenamos de mayor a menor y extraemos el Top 5
+                        let topGrupos = Object.keys(grupos)
+                            .map(k => ({ nombre: k, cantidad: grupos[k] }))
+                            .sort((a, b) => b.cantidad - a.cantidad)
+                            .slice(0, 5);
+                            
+                        // Construimos la etiqueta HTML del Tooltip
+                        let tooltipHtml = `<div style="font-family: 'Inter', sans-serif; min-width: 200px;">`;
+                        tooltipHtml += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.2em; color: ${params.color}; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">${pais} - ${params.seriesName}</strong>`;
+                        tooltipHtml += `Total traducido: <b>${params.value}</b> pub.<br><br>`;
+                        
+                        if(topGrupos.length > 0) {
+                            tooltipHtml += `<span style="font-size: 0.85em; color: #817BA6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Top 5 Grupos Editoriales:</span><br>`;
+                            topGrupos.forEach((g, i) => {
+                                // Acortar nombres muy largos para que no deformen la ventanita
+                                let nombreCorto = g.nombre.length > 35 ? g.nombre.substring(0, 35) + '...' : g.nombre;
+                                tooltipHtml += `<span style="font-size: 0.9em; display: block; margin-top: 4px;"><b>${i+1}.</b> ${nombreCorto} <span style="color:#006DF7">(${g.cantidad})</span></span>`;
+                            });
+                        } else {
+                            tooltipHtml += `<span style="font-size: 0.9em; font-style: italic; color: #817BA6;">Catálogo de grupos sin especificar</span>`;
+                        }
+                        tooltipHtml += `</div>`;
+                        
+                        return tooltipHtml;
+                    }
+                },
                 legend: { data: ['Comercial', 'Universitaria'], bottom: 0, textStyle: { fontFamily: 'Lora', color: '#817BA6' } },
                 grid: { left: '10%', right: '5%', bottom: '22%', top: '5%' },
                 xAxis: { 
