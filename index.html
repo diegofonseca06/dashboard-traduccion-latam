@@ -198,7 +198,45 @@
         </div>
     </section>
 
-    
+    <section id="seccionVis3" class="visualization-section">
+        <div class="container">
+            <div class="row align-items-center flex-row-reverse">
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">La Gravedad del Lenguaje: Flujos de Traducción Clave</h2>
+                    <p class="chart-description">
+                        El ecosistema editorial latinoamericano orbita alrededor de tres lenguas pivotales: el inglés, el portugués y el español. Analizar la dirección de estos flujos permite entender tanto la dependencia cultural externa como los puentes intrarregionales.
+                        <br><br>
+                        El siguiente <strong>Mapa de Árbol (Treemap)</strong> representa el volumen de obras según el escenario lingüístico que usted seleccione. Cada rectángulo es un <strong>país</strong>; a mayor área, mayor es la cantidad de publicaciones literarias procesadas en ese territorio.
+                        <br><br>
+                        <em>Interacción:</em> Alterne el menú de "Escenario" para cambiar el enfoque lingüístico. <strong>Haga clic sobre cualquier país</strong> para revelar a la izquierda el <strong>Top 5 de Géneros Literarios</strong>. Al posicionar el cursor sobre estas nuevas barras, identificará el <strong>Top 5 de grupos editoriales</strong> detrás de dichas traducciones.
+                    </p>
+                    
+                    <div class="filter-container">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Escenario Lingüístico:</label>
+                        <select id="filtroFlujoVis3" class="custom-select mb-4" style="font-size: 1.1rem; max-width: 100%;">
+                            <option value="ingles">Traducidas DESDE el Inglés</option>
+                            <option value="portugues">Traducidas DESDE el Portugués</option>
+                            <option value="espanol">Traducidas HACIA el Español</option>
+                        </select>
+
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año de Publicación:</label>
+                        <select id="filtroAnoVis3" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                            <option value="TODOS">Todos los años históricos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div style="display: flex; width: 100%; height: 550px;">
+                        <div id="vis3_main" style="width: 100%; height: 100%; transition: width 0.5s ease;"></div>
+                        <div id="vis3_detail" style="width: 0%; height: 100%; transition: width 0.5s ease; opacity: 0; padding-left: 20px;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
     
 
     <section class="visualization-section bg-alternate">
@@ -521,6 +559,149 @@
             }
         });
 
+
+        // ---------------------------------------------------------
+        // LÓGICA DE VISUALIZACIÓN 3 (Treemap + Drilldown Top 5)
+        // ---------------------------------------------------------
+        var chart3_main = echarts.init(document.getElementById('vis3_main'));
+        var chart3_detail = echarts.init(document.getElementById('vis3_detail'));
+        var rawDataV3 = { ingles: [], portugues: [], espanol: [] };
+        var datasetsLoadedV3 = 0;
+
+        function resetVis3Layout() {
+            document.getElementById('vis3_main').style.width = '100%';
+            let detailDiv = document.getElementById('vis3_detail');
+            detailDiv.style.width = '0%';
+            detailDiv.style.opacity = '0';
+            setTimeout(() => { chart3_main.resize(); chart3_detail.resize(); }, 300);
+        }
+
+        function renderVis3() {
+            resetVis3Layout();
+            
+            let flujo = document.getElementById('filtroFlujoVis3').value;
+            let yearFilter = document.getElementById('filtroAnoVis3').value;
+            let activeData = rawDataV3[flujo];
+
+            let filteredData = activeData;
+            if(yearFilter !== 'TODOS') {
+                filteredData = activeData.filter(d => d.ANO === yearFilter);
+            }
+
+            let countries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO').sort();
+            let treemapData = [];
+
+            countries.forEach(pais => {
+                let sum = filteredData.filter(d => d.PAIS === pais)
+                                      .reduce((acc, row) => acc + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
+                if(sum > 0) treemapData.push({ name: pais, value: sum });
+            });
+
+            var optionMain = {
+                tooltip: { 
+                    trigger: 'item',
+                    formatter: "<b>{b}</b><br/>{c} obras literarias<br><span style='font-size:0.85em;color:#817BA6;'><i>Clic para analizar géneros</i></span>"
+                },
+                color: ['#1F0F80', '#006DF7', '#817BA6', '#A09CBE', '#17142B'],
+                series: [{
+                    type: 'treemap', data: treemapData,
+                    roam: false, nodeClick: false, breadcrumb: {show: false},
+                    label: { show: true, formatter: '{b}\n{c}', fontFamily: 'Inter', fontSize: 12 },
+                    itemStyle: { borderColor: '#fff', borderWidth: 2, gapWidth: 2 }
+                }]
+            };
+            chart3_main.setOption(optionMain, true);
+
+            chart3_main.off('click');
+            chart3_main.on('click', function (params) {
+                let paisSeleccionado = params.name;
+                
+                document.getElementById('vis3_main').style.width = '55%';
+                let detailDiv = document.getElementById('vis3_detail');
+                detailDiv.style.width = '45%';
+                detailDiv.style.opacity = '1';
+                setTimeout(() => { chart3_main.resize(); chart3_detail.resize(); }, 100);
+
+                let specificData = filteredData.filter(d => d.PAIS === paisSeleccionado);
+                let generos = {};
+                specificData.forEach(d => {
+                    let gen = d['SUBCATEGORIA.DEWEY'];
+                    if(gen && gen !== 'SIN DATO') generos[gen] = (generos[gen] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                });
+
+                let topGeneros = Object.keys(generos).map(k => ({ nombre: k, cantidad: generos[k] })).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5);
+                topGeneros.reverse();
+                
+                let generoNames = topGeneros.map(g => g.nombre);
+                let generoCounts = topGeneros.map(g => g.cantidad);
+
+                var optionDetail = {
+                    title: { text: `Top Géneros: ${paisSeleccionado}`, textStyle: { fontFamily: 'Playfair Display', fontSize: 13, color: '#1F0F80' }, left: 'center', top: '0%' },
+                    tooltip: {
+                        trigger: 'item',
+                        backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                        formatter: function(p) {
+                            let genName = p.name;
+                            let genData = specificData.filter(d => d['SUBCATEGORIA.DEWEY'] === genName);
+                            let edits = {};
+                            genData.forEach(d => {
+                                let ed = d.GRUPO_EDITORIAL_COMPLETO;
+                                if(ed && ed !== 'SIN DATO') edits[ed] = (edits[ed] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                            });
+                            let topEdits = Object.keys(edits).map(k=>({n:k, c:edits[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
+
+                            let h = `<div style="font-family:'Inter'; font-size:12px; min-width:200px;">`;
+                            h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.2em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">${genName}</strong>`;
+                            h += `Total: <b>${p.value}</b> pub.<br><br>`;
+                            if(topEdits.length > 0) {
+                                h += `<span style="color:#817BA6;font-weight:bold;font-size:10px;text-transform:uppercase;">Top 5 Grupos Editoriales:</span><br/>`;
+                                topEdits.forEach((e,i)=> {
+                                    let nC = e.n.length > 30 ? e.n.substring(0,30)+'...' : e.n;
+                                    h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${nC} <span style="color:#1F0F80">(${e.c})</span></span>`;
+                                });
+                            } else {
+                                h += `<span style="font-size: 0.9em; font-style: italic; color: #817BA6;">Catálogo sin especificar</span>`;
+                            }
+                            h += `</div>`;
+                            return h;
+                        }
+                    },
+                    grid: { left: '5%', right: '15%', bottom: '10%', top: '15%', containLabel: true },
+                    xAxis: { type: 'value', show: false },
+                    yAxis: { type: 'category', data: generoNames, axisTick: {show: false}, axisLine: {show: false}, axisLabel: { fontFamily: 'Inter', fontSize: 10, formatter: function (val) { return val.length > 15 ? val.substring(0, 13) + '..' : val; } } },
+                    color: ['#1F0F80'],
+                    series: [{ type: 'bar', data: generoCounts, itemStyle: { borderRadius: [0, 4, 4, 0] }, label: { show: true, position: 'right', fontFamily: 'Inter', fontSize: 11, color: '#17142B', fontWeight: 'bold' } }]
+                };
+                chart3_detail.setOption(optionDetail);
+            });
+        }
+
+        // Carga secuencial de los 3 archivos
+        function checkLoadV3() {
+            datasetsLoadedV3++;
+            if(datasetsLoadedV3 === 3) {
+                let selectAno = document.getElementById('filtroAnoVis3');
+                let allYears = [...new Set([
+                    ...rawDataV3.ingles.map(d=>d.ANO), 
+                    ...rawDataV3.portugues.map(d=>d.ANO), 
+                    ...rawDataV3.espanol.map(d=>d.ANO)
+                ])].filter(a => a && a !== 'SIN DATO' && a >= '2010' && a <= '2025').sort().reverse();
+                
+                allYears.forEach(a => {
+                    let opt = document.createElement('option');
+                    opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt);
+                });
+
+                document.getElementById('filtroFlujoVis3').addEventListener('change', renderVis3);
+                selectAno.addEventListener('change', renderVis3);
+                renderVis3();
+            }
+        }
+
+        Papa.parse('data/Cruce_11_Dependencia_Ingles.csv', { download: true, header: true, complete: function(r) { rawDataV3.ingles = r.data; checkLoadV3(); } });
+        Papa.parse('data/Cruce_03_Traducido_Desde_Portugues.csv', { download: true, header: true, complete: function(r) { rawDataV3.portugues = r.data; checkLoadV3(); } });
+        Papa.parse('data/Cruce_04_Traducido_Al_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV3.espanol = r.data; checkLoadV3(); } });
+        
         // ---------------------------------------------------------
         // VISUALIZACIÓN 4
         // ---------------------------------------------------------
@@ -647,6 +828,8 @@
             if(typeof chart1 !== 'undefined') chart1.resize(); 
             if(typeof chart2_main !== 'undefined') chart2_main.resize(); 
             if(typeof chart2_detail !== 'undefined') chart2_detail.resize(); 
+            if(typeof chart3_main !== 'undefined') chart3_main.resize(); 
+            if(typeof chart3_detail !== 'undefined') chart3_detail.resize(); 
             if(typeof chart4 !== 'undefined') chart4.resize(); 
             if(typeof chart8 !== 'undefined') chart8.resize(); 
         });
