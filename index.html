@@ -333,6 +333,36 @@
         </div>
     </section>
 
+    <section id="seccionVis7" class="visualization-section reveal">
+        <div class="container">
+            <div class="row align-items-center flex-row-reverse">
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">El Puente Bilingüe: Flujos entre el Español y el Portugués</h2>
+                    <p class="chart-description">
+                        América Latina respira en dos idiomas dominantes. Este <strong>Diagrama de Sankey</strong> visualiza los "ríos" de datos que revelan cómo ocurre el intercambio literario directo entre la orilla lusófona y la hispanohablante.
+                        <br><br>
+                        Siga el flujo de las bandas desde la izquierda hacia la derecha: el recorrido inicia en la <strong>Lengua Original</strong> de la obra, viaja hacia el <strong>País</strong> que gestionó su publicación, se distribuye por el <strong>Género Literario</strong> correspondiente y desemboca en la <strong>Lengua de Destino</strong>. El grosor de cada caudal representa la cantidad de publicaciones.
+                        <br><br>
+                        <em>Interacción:</em> Utilice el filtro para analizar años específicos. <strong>Pase el cursor sobre cualquier banda fluida (enlace)</strong> para revelar un cuadro detallado que calculará, en tiempo real, el <strong>Top 5 de grupos editoriales</strong> que impulsaron ese flujo exacto.
+                    </p>
+                    
+                    <div class="filter-container">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año de Publicación:</label>
+                        <select id="filtroAnoVis7" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                            <option value="TODOS">Todos los años históricos</option>
+                            </select>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div id="vis7" class="chart-container" style="height: 650px;"></div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     
     <section class="visualization-section">
         <div class="container">
@@ -1213,6 +1243,169 @@
             }
         });
 
+        // ---------------------------------------------------------
+        // LÓGICA DE VISUALIZACIÓN 7 (Diagrama de Sankey Esp-Pt)
+        // ---------------------------------------------------------
+        var chart7 = echarts.init(document.getElementById('vis7'));
+        var rawDataV7 = { esp_pt: [], pt_esp: [] };
+        var datasetsLoadedV7 = 0;
+
+        function renderVis7() {
+            let yearFilter = document.getElementById('filtroAnoVis7').value;
+            
+            // Unificamos las dos bases de flujos
+            let dataEspPt = rawDataV7.esp_pt;
+            let dataPtEsp = rawDataV7.pt_esp;
+
+            if (yearFilter !== 'TODOS') {
+                dataEspPt = dataEspPt.filter(d => d.ANO === yearFilter);
+                dataPtEsp = dataPtEsp.filter(d => d.ANO === yearFilter);
+            }
+
+            // Estructura para acumular los enlaces (links) del Sankey y guardar los grupos editoriales
+            let linksMap = {};
+
+            function addLink(source, target, value, editorial) {
+                let key = source + '|' + target;
+                if (!linksMap[key]) {
+                    linksMap[key] = { value: 0, edits: {} };
+                }
+                linksMap[key].value += value;
+                if (editorial && editorial !== 'SIN DATO') {
+                    linksMap[key].edits[editorial] = (linksMap[key].edits[editorial] || 0) + value;
+                }
+            }
+
+            // Procesar flujo ESP -> PT
+            dataEspPt.forEach(d => {
+                let val = parseInt(d.CANTIDAD_REGISTROS || 0);
+                let pais = d.PAIS;
+                let gen = d['SUBCATEGORIA.DEWEY'];
+                let ed = d.GRUPO_EDITORIAL_COMPLETO;
+                
+                if (val > 0 && pais && gen) {
+                    addLink('Español (Origen)', pais, val, ed);
+                    addLink(pais, gen + ' ', val, ed); // Espacio extra para que el nombre del nodo no colisione con países
+                    addLink(gen + ' ', 'Portugués (Destino)', val, ed);
+                }
+            });
+
+            // Procesar flujo PT -> ESP
+            dataPtEsp.forEach(d => {
+                let val = parseInt(d.CANTIDAD_REGISTROS || 0);
+                let pais = d.PAIS;
+                let gen = d['SUBCATEGORIA.DEWEY'];
+                let ed = d.GRUPO_EDITORIAL_COMPLETO;
+                
+                if (val > 0 && pais && gen) {
+                    addLink('Portugués (Origen)', pais, val, ed);
+                    addLink(pais, gen + ' ', val, ed);
+                    addLink(gen + ' ', 'Español (Destino)', val, ed);
+                }
+            });
+
+            // Extraer Nodos y Enlaces en el formato estricto de ECharts
+            let nodesSet = new Set();
+            let linksList = [];
+
+            Object.keys(linksMap).forEach(k => {
+                let parts = k.split('|');
+                let src = parts[0];
+                let tgt = parts[1];
+                let info = linksMap[k];
+
+                nodesSet.add(src);
+                nodesSet.add(tgt);
+
+                linksList.push({
+                    source: src,
+                    target: tgt,
+                    value: info.value,
+                    edits: info.edits // Guardamos la data oculta para el Tooltip
+                });
+            });
+
+            let nodesList = Array.from(nodesSet).map(n => ({ name: n }));
+
+            var option7 = {
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    formatter: function (params) {
+                        // Si es un nodo (caja) y no un link
+                        if (params.dataType === 'node') {
+                            return `<strong style="font-family:'Playfair Display',serif; color:#1F0F80; font-size:1.1em;">${params.name.trim()}</strong><br/>Volumen total: <b>${params.value}</b>`;
+                        }
+                        
+                        // Si es un link (banda fluida)
+                        let src = params.data.source.trim();
+                        let tgt = params.data.target.trim();
+                        let val = params.data.value;
+                        let edits = params.data.edits;
+
+                        let topEdits = Object.keys(edits).map(k => ({ n: k, c: edits[k] })).sort((a, b) => b.c - a.c).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:240px;">`;
+                        h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.1em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">Flujo: ${src} ➔ ${tgt}</strong>`;
+                        h += `Obras transitadas: <b>${val}</b><br><br>`;
+                        
+                        if (topEdits.length > 0) {
+                            h += `<span style="color:#006DF7;font-weight:bold;font-size:10px;text-transform:uppercase;">Top 5 Grupos Editoriales en este flujo:</span><br/>`;
+                            topEdits.forEach((e, i) => {
+                                let nC = e.n.length > 32 ? e.n.substring(0, 30) + '...' : e.n;
+                                h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${nC} <span style="color:#817BA6">(${e.c})</span></span>`;
+                            });
+                        } else {
+                            h += `<span style="font-size: 0.9em; font-style: italic; color: #817BA6;">Detalle editorial no especificado</span>`;
+                        }
+                        h += `</div>`;
+                        return h;
+                    }
+                },
+                series: [{
+                    type: 'sankey',
+                    layout: 'none',
+                    emphasis: { focus: 'adjacency' }, // Al poner el mouse, ilumina toda la ruta
+                    nodeAlign: 'justify',
+                    data: nodesList,
+                    links: linksList,
+                    lineStyle: { color: 'source', curveness: 0.5, opacity: 0.4 },
+                    itemStyle: { borderWidth: 1, borderColor: '#fff' },
+                    label: { fontFamily: 'Inter', fontSize: 10, color: '#17142B', formatter: function(p) { return p.name.trim(); } }
+                }],
+                color: ['#1F0F80', '#006DF7', '#817BA6', '#17142B', '#A09CBE', '#3498DB', '#95A5A6', '#E74C3C', '#2C3E50']
+            };
+
+            // Solo dibuja el Sankey si hay datos, de lo contrario limpia
+            if(linksList.length > 0) {
+                chart7.setOption(option7, true);
+            } else {
+                chart7.clear();
+            }
+        }
+
+        // Controlador de carga para asegurar que ambos archivos estén listos
+        function checkLoadV7() {
+            datasetsLoadedV7++;
+            if (datasetsLoadedV7 === 2) {
+                let selectAno = document.getElementById('filtroAnoVis7');
+                let allYears = [...new Set([
+                    ...rawDataV7.esp_pt.map(d => d.ANO), 
+                    ...rawDataV7.pt_esp.map(d => d.ANO)
+                ])].filter(a => a && a !== 'SIN DATO' && a >= '2010' && a <= '2025').sort().reverse();
+                
+                allYears.forEach(a => {
+                    let opt = document.createElement('option');
+                    opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt);
+                });
+
+                selectAno.addEventListener('change', renderVis7);
+                renderVis7();
+            }
+        }
+
+        Papa.parse('data/Cruce_09_Flujo_Espanol_a_Portugues.csv', { download: true, header: true, complete: function(r) { rawDataV7.esp_pt = r.data; checkLoadV7(); } });
+        Papa.parse('data/Cruce_10_Flujo_Portugues_a_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV7.pt_esp = r.data; checkLoadV7(); } });
         
         // ---------------------------------------------------------
         // VISUALIZACIÓN 8
@@ -1297,7 +1490,8 @@
             if(typeof chart3_detail !== 'undefined') chart3_detail.resize(); 
             if(typeof chart4 !== 'undefined') chart4.resize(); 
             if(typeof chart5 !== 'undefined') chart5.resize(); 
-            if(typeof chart6 !== 'undefined') chart6.resize(); // NUEVO
+            if(typeof chart6 !== 'undefined') chart6.resize(); 
+            if(typeof chart7 !== 'undefined') chart7.resize(); // NUEVO
             if(typeof chart8 !== 'undefined') chart8.resize(); 
         });
     </script>
