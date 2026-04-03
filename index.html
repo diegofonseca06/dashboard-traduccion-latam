@@ -404,6 +404,46 @@
         </div>
     </section>
 
+    <section id="seccionVis9" class="visualization-section bg-alternate reveal">
+        <div class="container">
+            <div class="row align-items-center">
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">La Anatomía del Catálogo: Idiomas y Géneros</h2>
+                    <p class="chart-description">
+                        ¿Qué lenguas dominan la poesía? ¿Desde dónde se traducen los grandes ensayos? Esta visualización revela la red de conexiones entre los principales idiomas de origen y los géneros literarios más fuertes del mercado.
+                        <br><br>
+                        El diagrama rastrea el flujo desde la izquierda (<strong>Top 5 de Idiomas de Origen</strong>) hacia la derecha (<strong>Top 5 de Géneros Literarios</strong>). El grosor de cada conexión representa el volumen de publicaciones de esa combinación exacta.
+                        <br><br>
+                        <em>Interacción:</em> Ajuste los filtros para ver el panorama de un país o año determinado. <strong>Pase el cursor sobre cualquier conexión</strong> para descubrir el <strong>Top 5 de grupos editoriales</strong> responsables de traer ese idioma hacia ese género literario específico.
+                    </p>
+                    
+                    <div class="filter-container">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por País:</label>
+                                <select id="filtroPaisVis9" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Todos los países</option>
+                                    </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año:</label>
+                                <select id="filtroAnoVis9" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Periodo Histórico</option>
+                                    </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div id="vis9" class="chart-container" style="height: 650px;"></div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <script>
         function reveal() {
             var reveals = document.querySelectorAll(".reveal");
@@ -1565,6 +1605,151 @@
             }
         });
 
+
+        // ---------------------------------------------------------
+        // LÓGICA DE VISUALIZACIÓN 9 (Diagrama Relacional Sankey: Idiomas a Géneros)
+        // ---------------------------------------------------------
+        var chart9 = echarts.init(document.getElementById('vis9'));
+        var rawDataV9 = [];
+
+        function renderVis9() {
+            let paisFilter = document.getElementById('filtroPaisVis9').value;
+            let anoFilter = document.getElementById('filtroAnoVis9').value;
+
+            let filteredData = rawDataV9;
+            if (paisFilter !== 'TODOS') filteredData = filteredData.filter(d => d.PAIS === paisFilter);
+            if (anoFilter !== 'TODOS') filteredData = filteredData.filter(d => d.ANO === anoFilter);
+
+            // 1. Determinar el Top 5 Dinámico de Géneros (Dewey)
+            let countsDewey = {};
+            filteredData.forEach(d => {
+                let dw = d['SUBCATEGORIA.DEWEY'];
+                if(dw && dw !== 'SIN DATO') {
+                    countsDewey[dw] = (countsDewey[dw] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                }
+            });
+            let top5DeweysNames = Object.keys(countsDewey).sort((a,b) => countsDewey[b] - countsDewey[a]).slice(0, 5);
+
+            // Filtrar la base de datos solo para estos 5 géneros ganadores
+            let dataTopDeweys = filteredData.filter(d => top5DeweysNames.includes(d['SUBCATEGORIA.DEWEY']));
+
+            // 2. Determinar el Top 5 Dinámico de Idiomas de Origen (que alimentan esos géneros)
+            let countsIdioma = {};
+            dataTopDeweys.forEach(d => {
+                let idm = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
+                if(idm && idm !== 'SIN DATO' && idm !== 'SIN IDENTIFICAR') {
+                    countsIdioma[idm] = (countsIdioma[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                }
+            });
+            let top5IdiomasNames = Object.keys(countsIdioma).sort((a,b) => countsIdioma[b] - countsIdioma[a]).slice(0, 5);
+
+            // 3. Estructura para acumular los enlaces (Sankey)
+            let nodesSet = new Set();
+            let linksMap = {};
+
+            dataTopDeweys.forEach(d => {
+                let idm = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
+                let dw = d['SUBCATEGORIA.DEWEY'];
+                let val = parseInt(d.CANTIDAD_REGISTROS || 0);
+                let ed = d.GRUPO_EDITORIAL_COMPLETO;
+
+                if (top5IdiomasNames.includes(idm) && top5DeweysNames.includes(dw) && val > 0) {
+                    
+                    // Modificamos el nombre del género con un espacio para evitar errores de ECharts si un idioma y un género se llaman igual
+                    let targetName = dw + ' '; 
+                    
+                    nodesSet.add(idm);
+                    nodesSet.add(targetName);
+
+                    let linkKey = idm + '|' + targetName;
+                    if (!linksMap[linkKey]) linksMap[linkKey] = { value: 0, edits: {} };
+                    
+                    linksMap[linkKey].value += val;
+                    if (ed && ed !== 'SIN DATO') {
+                        linksMap[linkKey].edits[ed] = (linksMap[linkKey].edits[ed] || 0) + val;
+                    }
+                }
+            });
+
+            let nodesList = Array.from(nodesSet).map(n => ({ name: n }));
+            let linksList = Object.keys(linksMap).map(k => {
+                let parts = k.split('|');
+                return { source: parts[0], target: parts[1], value: linksMap[k].value, edits: linksMap[k].edits };
+            });
+
+            var option9 = {
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    formatter: function (params) {
+                        if (params.dataType === 'node') {
+                            return `<strong style="font-family:'Playfair Display',serif; color:#1F0F80; font-size:1.1em;">${params.name.trim()}</strong><br/>Volumen involucrado: <b>${params.value}</b>`;
+                        }
+                        
+                        let src = params.data.source.trim();
+                        let tgt = params.data.target.trim();
+                        let val = params.data.value;
+                        let edits = params.data.edits;
+
+                        let topEdits = Object.keys(edits).map(k => ({ n: k, c: edits[k] })).sort((a, b) => b.c - a.c).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
+                        h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.1em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">${src} ➔ ${tgt}</strong>`;
+                        h += `Obras traducidas: <b>${val}</b><br><br>`;
+                        
+                        if (topEdits.length > 0) {
+                            h += `<span style="color:#006DF7;font-weight:bold;font-size:10px;text-transform:uppercase;">Top 5 Grupos Editoriales:</span><br/>`;
+                            topEdits.forEach((e, i) => {
+                                let pct = ((e.c / val) * 100).toFixed(1);
+                                let nC = e.n.length > 25 ? e.n.substring(0, 25) + '...' : e.n;
+                                h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${nC} <b>(${pct}%)</b></span>`;
+                            });
+                        } else {
+                            h += `<span style="font-size: 0.9em; font-style: italic; color: #817BA6;">Detalle editorial no especificado</span>`;
+                        }
+                        h += `</div>`;
+                        return h;
+                    }
+                },
+                series: [{
+                    type: 'sankey',
+                    layout: 'none',
+                    emphasis: { focus: 'adjacency' },
+                    nodeAlign: 'justify',
+                    data: nodesList,
+                    links: linksList,
+                    lineStyle: { color: 'source', curveness: 0.5, opacity: 0.4 },
+                    itemStyle: { borderWidth: 1, borderColor: '#fff' },
+                    label: { fontFamily: 'Inter', fontSize: 10, color: '#17142B', formatter: function(p) { return p.name.trim().length > 30 ? p.name.trim().substring(0,28)+'..' : p.name.trim(); } }
+                }],
+                color: ['#1F0F80', '#006DF7', '#817BA6', '#17142B', '#A09CBE', '#3498DB', '#95A5A6', '#E74C3C', '#2C3E50', '#27AE60']
+            };
+
+            if(linksList.length > 0) chart9.setOption(option9, true);
+            else chart9.clear();
+        }
+
+        Papa.parse('data/Cruce_14_Idiomas_Top5_Generos.csv', {
+            download: true, header: true,
+            complete: function(results) {
+                rawDataV9 = results.data;
+                
+                // Llenar Filtro de País
+                let selectPais = document.getElementById('filtroPaisVis9');
+                let paises = [...new Set(rawDataV9.map(d => d.PAIS))].filter(p => p && p !== 'SIN DATO').sort();
+                paises.forEach(p => { let opt = document.createElement('option'); opt.value = p; opt.innerHTML = p; selectPais.appendChild(opt); });
+
+                // Llenar Filtro de Año
+                let selectAno = document.getElementById('filtroAnoVis9');
+                let anos = [...new Set(rawDataV9.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO').sort().reverse();
+                anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
+
+                selectPais.addEventListener('change', renderVis9);
+                selectAno.addEventListener('change', renderVis9);
+                renderVis9();
+            }
+        });
+
         window.addEventListener('resize', function() { 
             if(typeof chart1 !== 'undefined') chart1.resize(); 
             if(typeof chart2_main !== 'undefined') chart2_main.resize(); 
@@ -1574,8 +1759,9 @@
             if(typeof chart4 !== 'undefined') chart4.resize(); 
             if(typeof chart5 !== 'undefined') chart5.resize(); 
             if(typeof chart6 !== 'undefined') chart6.resize(); 
-            if(typeof chart7 !== 'undefined') chart7.resize(); // NUEVO
+            if(typeof chart7 !== 'undefined') chart7.resize(); 
             if(typeof chart8 !== 'undefined') chart8.resize(); 
+            if(typeof chart9 !== 'undefined') chart9.resize(); // NUEVO
         });
     </script>
 </body>
