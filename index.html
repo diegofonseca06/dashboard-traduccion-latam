@@ -363,8 +363,11 @@
             }
         });
 
+            }
+        });
+
         // ---------------------------------------------------------
-        // LÓGICA DE VISUALIZACIÓN 2 (Barras + Drilldown Top 5)
+        // VISUALIZACIÓN 2: Mapa Literario (Barras + Drilldown Top 5)
         // ---------------------------------------------------------
         var chart2_main = echarts.init(document.getElementById('vis2_main'));
         var chart2_detail = echarts.init(document.getElementById('vis2_detail'));
@@ -408,7 +411,7 @@
                 },
                 yAxis: { 
                     type: 'value', 
-                    name: 'Cantidad', nameLocation: 'middle', nameGap: 50, nameTextStyle: axisTextStyle,
+                    name: 'Cantidad de Publicaciones', nameLocation: 'middle', nameGap: 60, nameTextStyle: axisTextStyle,
                     splitLine: { lineStyle: { color: '#f0f0f0' } }
                 },
                 color: ['#817BA6'], // Color morado sutil para diferenciar de Vis 1
@@ -419,23 +422,21 @@
                 }]
             };
             
-            chart2_main.setOption(optionMain, true); // true limpia configuraciones previas
+            chart2_main.setOption(optionMain, true); 
 
-            // =====================================================
-            // LÓGICA DEL CLIC (Drilldown)
-            // =====================================================
-            chart2_main.off('click'); // Prevenir múltiples eventos
+            // Lógica del Clic (Drilldown)
+            chart2_main.off('click'); 
             chart2_main.on('click', function (params) {
                 let paisSeleccionado = params.name;
                 
-                // 1. Efecto Visual: Partir la pantalla
+                // Efecto Visual: Partir la pantalla
                 document.getElementById('vis2_main').style.width = '55%';
                 let detailDiv = document.getElementById('vis2_detail');
                 detailDiv.style.width = '45%';
                 detailDiv.style.opacity = '1';
                 setTimeout(() => { chart2_main.resize(); chart2_detail.resize(); }, 100);
 
-                // 2. Procesar Datos para el Top 5 de Géneros
+                // Procesar Datos para el Top 5 de Géneros
                 let specificData = filteredData.filter(d => d.PAIS === paisSeleccionado);
                 
                 let generos = {};
@@ -452,10 +453,10 @@
                 let generoNames = topGeneros.map(g => g.nombre);
                 let generoCounts = topGeneros.map(g => g.cantidad);
 
-                // 3. Renderizar Gráfico de Detalle con Top 5 Editoriales en Tooltip
+                // Renderizar Gráfico de Detalle con Top 5 Editoriales en Tooltip
                 var optionDetail = {
                     title: { 
-                        text: `Top Géneros: ${paisSeleccionado}`,
+                        text: `Top 5 Géneros: ${paisSeleccionado}`,
                         textStyle: { fontFamily: 'Playfair Display', fontSize: 13, color: '#1F0F80' },
                         left: 'center', top: '0%'
                     },
@@ -471,7 +472,7 @@
                                 if(ed && ed !== 'SIN DATO') edits[ed] = (edits[ed] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
                             });
                             
-                            // AHORA SACAMOS EL TOP 5 DE EDITORIALES
+                            // Top 5 Grupos Editoriales
                             let topEdits = Object.keys(edits).map(k=>({n:k, c:edits[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
                             let h = `<div style="font-family:'Inter'; font-size:12px; min-width:200px;">`;
@@ -512,13 +513,15 @@
                 rawDataV2 = results.data;
                 let selectAno = document.getElementById('filtroAnoVis2');
                 let anos = [...new Set(rawDataV2.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO' && a >= '2010' && a <= '2025').sort().reverse();
-                anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
+                anos.forEach(a => {
+                    let opt = document.createElement('option');
+                    opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt);
+                });
                 
                 selectAno.addEventListener('change', (e) => renderVis2(e.target.value));
                 renderVis2('TODOS');
             }
         });
-        
 
         // ---------------------------------------------------------
         // VISUALIZACIÓN 4
@@ -642,7 +645,12 @@
             }
         });
 
-        window.addEventListener('resize', function() { chart1.resize(); chart2_main.resize(); chart2_detail.resize(); chart4.resize(); chart8.resize(); });
+        window.addEventListener('resize', function() { 
+            if(typeof chart1 !== 'undefined') chart1.resize(); 
+            if(typeof chart2_main !== 'undefined') chart2_main.resize(); 
+            if(typeof chart2_detail !== 'undefined') chart2_detail.resize(); 
+            if(typeof chart4 !== 'undefined') chart4.resize(); 
+            if(typeof chart8 !== 'undefined') chart8.resize(); 
         });
     </script>
 </body>
