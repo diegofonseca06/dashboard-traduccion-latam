@@ -198,9 +198,9 @@
         </div>
     </section>
 
-    <section id="seccionVis3" class="visualization-section">
+    <section id="seccionVis3" class="visualization-section bg-alternate reveal">
         <div class="container">
-            <div class="row align-items-center flex-row-reverse">
+            <div class="row align-items-center">
                 
                 <div class="col-lg-5 delay-text">
                     <h2 class="chart-title">La Gravedad del Lenguaje: Flujos de Traducción Clave</h2>
@@ -209,7 +209,7 @@
                         <br><br>
                         El siguiente gráfico clasifica los <strong>países de publicación</strong> según su volumen de traducción para el escenario lingüístico seleccionado. 
                         <br><br>
-                        <em>Interacción:</em> Utilice la barra de desplazamiento lateral en el gráfico para explorar todos los países, sin importar cuán pequeño sea su volumen. <strong>Haga clic sobre la barra de cualquier país</strong> para revelar a la izquierda el <strong>Top 5 de Géneros Literarios</strong> y sus editoriales protagónicas. Al posicionar el cursor sobre los países, descubrirá también los principales idiomas involucrados en ese flujo específico.
+                        <em>Interacción:</em> Utilice la barra de desplazamiento lateral para explorar todos los países. <strong>Al posicionar el cursor sobre las barras</strong>, descubrirá el <strong>Top 5 de idiomas</strong> hacia (o desde) los cuales se traduce. Además, <strong>haga clic sobre cualquier país</strong> para revelar a la derecha el <strong>Top 5 de Géneros Literarios</strong> y sus editoriales protagónicas.
                     </p>
                     
                     <div class="filter-container">
@@ -237,7 +237,6 @@
             </div>
         </div>
     </section>
-    
 
     <section class="visualization-section bg-alternate">
         <div class="container">
@@ -597,13 +596,12 @@
                 }
             });
 
-            // Convertir a array y ordenar de menor a mayor (ECharts dibuja de abajo hacia arriba)
+            // Convertir a array y ordenar de menor a mayor
             let sortedCountries = Object.keys(countryTotals).map(k => ({ name: k, value: countryTotals[k] })).sort((a, b) => a.value - b.value);
             
             let cNames = sortedCountries.map(c => c.name);
             let cValues = sortedCountries.map(c => c.value);
 
-            // Calcular índices para mostrar solo el Top 12 por defecto en el scroll
             let startIdx = Math.max(0, cNames.length - 12);
             let endIdx = Math.max(0, cNames.length - 1);
 
@@ -620,15 +618,14 @@
                         let countryData = filteredData.filter(d => d.PAIS === pais);
                         
                         let idiomas = {};
-                        let idiomaEncontrado = false;
                         countryData.forEach(d => {
                             let idm = d[colIdioma];
-                            if(idm && idm !== 'SIN DATO' && typeof idm !== 'undefined') {
+                            if(idm && idm !== 'SIN DATO' && idm.trim() !== '') {
                                 idiomas[idm] = (idiomas[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
-                                idiomaEncontrado = true;
                             }
                         });
 
+                        // Top 5 de Idiomas
                         let topIdiomas = Object.keys(idiomas).map(k => ({n:k, c:idiomas[k]})).sort((a,b)=>b.c - a.c).slice(0, 5);
 
                         let h = `<div style="font-family:'Inter'; font-size:12px; min-width:220px;">`;
@@ -636,13 +633,14 @@
                         h += `Volumen Total: <b>${params.value}</b> obras<br>`;
                         h += `<span style='font-size:0.85em;color:#817BA6;'><i>Clic para analizar géneros</i></span><br><br>`;
 
-                        if(idiomaEncontrado && topIdiomas.length > 0) {
+                        if(topIdiomas.length > 0) {
                             h += `<span style="color:#1F0F80;font-weight:bold;font-size:10px;text-transform:uppercase;">Top 5 ${tituloIdioma}:</span><br/>`;
                             topIdiomas.forEach((e,i) => {
-                                h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${e.n} <span style="color:#817BA6">(${e.c})</span></span>`;
+                                let nIdm = e.n.length > 25 ? e.n.substring(0,25)+'...' : e.n;
+                                h += `<span style="display:block;margin-top:4px;"><b>${i+1}.</b> ${nIdm} <span style="color:#817BA6">(${e.c})</span></span>`;
                             });
                         } else {
-                            h += `<span style="color:#817BA6;font-size:0.9em;font-style:italic;">(Datos de idioma no disponibles en el resumen actual)</span>`;
+                            h += `<span style="color:#817BA6;font-size:0.9em;font-style:italic;">(Datos de idioma no detallados)</span>`;
                         }
                         h += `</div>`;
                         return h;
@@ -731,7 +729,7 @@
             });
         }
 
-        // Carga secuencial de los 3 archivos
+        // Carga secuencial usando los nombres originales (sin V2)
         function checkLoadV3() {
             datasetsLoadedV3++;
             if(datasetsLoadedV3 === 3) {
@@ -756,6 +754,7 @@
         Papa.parse('data/Cruce_11_Dependencia_Ingles.csv', { download: true, header: true, complete: function(r) { rawDataV3.ingles = r.data; checkLoadV3(); } });
         Papa.parse('data/Cruce_03_Traducido_Desde_Portugues.csv', { download: true, header: true, complete: function(r) { rawDataV3.portugues = r.data; checkLoadV3(); } });
         Papa.parse('data/Cruce_04_Traducido_Al_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV3.espanol = r.data; checkLoadV3(); } });
+
         
         // ---------------------------------------------------------
         // VISUALIZACIÓN 4
