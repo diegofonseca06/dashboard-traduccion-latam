@@ -1509,19 +1509,21 @@
             var option8 = {
                 tooltip: { 
                     trigger: 'item',
-                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    confine: true, // <--- ESTRATEGIA 2: Evita que se salga de los márgenes del gráfico
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', 
+                    borderColor: '#1F0F80', 
+                    textStyle: { color: '#17142B' },
                     formatter: function(params) {
                         let idmOrigen = params.name;
-                        let region = params.seriesName; // 'BRASIL' o 'RESTO DE LATAM'
+                        let region = params.seriesName;
                         let totalBarra = Math.abs(params.value);
                         
-                        // Filtrar subconjunto exacto para el Tooltip
                         let subData = filteredData.filter(d => 
                             d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idmOrigen && 
                             d.REGION_BRASIL_LATAM === region
                         );
 
-                        // Calcular Top 5 IDIOMAS DESTINO (NUEVO)
+                        // Top 5 Destinos
                         let destinos = {};
                         subData.forEach(d => {
                             let dst = d['IDIOMA.ESTANDARIZADO.COMPLETO'];
@@ -1531,7 +1533,7 @@
                         });
                         let topDestinos = Object.keys(destinos).map(k=>({n:k, c:destinos[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
-                        // Calcular Top 5 Editoriales
+                        // Top 5 Editoriales
                         let edits = {};
                         subData.forEach(d => {
                             let e = d.GRUPO_EDITORIAL_COMPLETO;
@@ -1539,7 +1541,7 @@
                         });
                         let topEdits = Object.keys(edits).map(k=>({n:k, c:edits[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
-                        // Calcular Top 5 Subcategorías Dewey
+                        // Top 5 Dewey
                         let deweys = {};
                         subData.forEach(d => {
                             let dw = d['SUBCATEGORIA.DEWEY'];
@@ -1547,44 +1549,67 @@
                         });
                         let topDeweys = Object.keys(deweys).map(k=>({n:k, c:deweys[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
-                        // Construcción del HTML del Tooltip
-                        let h = `<div style="font-family:'Inter'; font-size:11px; min-width:260px;">`;
-                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:8px;padding-bottom:4px;">Origen: ${idmOrigen} ➔ ${region}</strong>`;
-                        h += `Total: <b>${totalBarra}</b> publicaciones<br><br>`;
+                        // ESTRATEGIA 1: Contenedor HTML con Flexbox (max-width controla que no se alargue infinitamente)
+                        let h = `<div style="font-family:'Inter'; font-size:11px; max-width: 480px; white-space: normal;">`;
+                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:6px;padding-bottom:4px;">Origen: ${idmOrigen} ➔ ${region}</strong>`;
+                        h += `Total: <b>${totalBarra}</b> publicaciones<br>`;
                         
-                        // Sección Idiomas Destino
+                        // Contenedor Flex para las columnas
+                        h += `<div style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 8px;">`;
+
                         if(topDestinos.length > 0) {
-                            h += `<span style="color:#27AE60;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Idiomas de Destino:</span><br>`;
+                            h += `<div style="flex: 1; min-width: 140px;">`;
+                            h += `<span style="color:#27AE60;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Destinos:</span><br>`;
                             topDestinos.forEach((dst,i) => {
                                 let pct = ((dst.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dst.n.substring(0,25)} <b>(${pct}%)</b></span>`;
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dst.n.substring(0,20)} <b>(${pct}%)</b></span>`;
                             });
-                            h += `<br>`;
+                            h += `</div>`;
                         }
 
-                        // Sección Editoriales
                         if(topEdits.length > 0) {
-                            h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Grupos Editoriales:</span><br>`;
+                            h += `<div style="flex: 1; min-width: 145px;">`;
+                            h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Editoriales:</span><br>`;
                             topEdits.forEach((e,i) => {
                                 let pct = ((e.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${e.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${e.n.substring(0,20)}... <b>(${pct}%)</b></span>`;
                             });
-                            h += `<br>`;
+                            h += `</div>`;
                         }
 
-                        // Sección Dewey (Solo si no hay un género ya seleccionado en el filtro)
                         if(topDeweys.length > 0 && genreFilter === 'TODOS') {
-                            h += `<span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas (Dewey):</span><br>`;
+                            h += `<div style="flex: 1; min-width: 145px;">`;
+                            h += `<span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas:</span><br>`;
                             topDeweys.forEach((dw,i) => {
                                 let pct = ((dw.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dw.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dw.n.substring(0,20)}... <b>(${pct}%)</b></span>`;
                             });
+                            h += `</div>`;
                         }
                         
-                        h += `</div>`;
+                        h += `</div></div>`;
                         return h;
                     }
                 },
+                legend: { data: ['RESTO DE LATAM', 'BRASIL'], bottom: 0, textStyle: { fontFamily: 'Lora' } },
+                grid: { left: '20%', right: '5%', bottom: '15%', top: '5%' },
+                xAxis: { 
+                    type: 'value', 
+                    name: 'Publicaciones', nameLocation: 'middle', nameGap: 30, nameTextStyle: axisTextStyle,
+                    axisLabel: { formatter: (val) => Math.abs(val) },
+                    splitLine: { lineStyle: { color: '#f0f0f0' } }
+                }, 
+                yAxis: { 
+                    type: 'category', axisTick: { show: false }, data: idiomasFinales, 
+                    axisLabel: { fontFamily: 'Inter', fontWeight: 'bold', fontSize: 10 } 
+                },
+                color: ['#817BA6', '#006DF7'],
+                series: [
+                    { name: 'RESTO DE LATAM', type: 'bar', stack: 'Total', data: dataResto, itemStyle: { borderRadius: [3, 0, 0, 3] } },
+                    { name: 'BRASIL', type: 'bar', stack: 'Total', data: dataBrasil, itemStyle: { borderRadius: [0, 3, 3, 0] } }
+                ]
+            };
+            
                 legend: { data: ['RESTO DE LATAM', 'BRASIL'], bottom: 0, textStyle: { fontFamily: 'Lora' } },
                 grid: { left: '20%', right: '10%', bottom: '15%', top: '5%' },
                 xAxis: { 
