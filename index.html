@@ -1476,7 +1476,7 @@
             if(yearFilter !== 'TODOS') filteredData = filteredData.filter(d => d.ANO === yearFilter);
             if(genreFilter !== 'TODOS') filteredData = filteredData.filter(d => d['SUBCATEGORIA.DEWEY'] === genreFilter);
 
-            // 1. Determinar el Top 10 de Idiomas Origen para cada región (Excluyendo SIN IDENTIFICAR)
+            // 1. Determinar el Top 10 de Idiomas Origen para cada región
             let countsBrasil = {}, countsResto = {};
             
             filteredData.forEach(d => {
@@ -1492,18 +1492,18 @@
             let topBrasil = Object.keys(countsBrasil).sort((a,b) => countsBrasil[b] - countsBrasil[a]).slice(0, 10);
             let topResto = Object.keys(countsResto).sort((a,b) => countsResto[b] - countsResto[a]).slice(0, 10);
             
-            // Unión de ambos Top 10 (Set elimina repetidos)
+            // Unión de ambos Top 10
             let idiomasFinales = [...new Set([...topBrasil, ...topResto])].sort((a, b) => {
                 let totalA = (countsBrasil[a] || 0) + (countsResto[a] || 0);
                 let totalB = (countsBrasil[b] || 0) + (countsResto[b] || 0);
-                return totalA - totalB; // Orden para que el mayor quede arriba en barras horizontales
+                return totalA - totalB; 
             });
 
             let dataBrasil = [], dataResto = [];
 
             idiomasFinales.forEach(idm => {
                 dataBrasil.push(countsBrasil[idm] || 0);
-                dataResto.push(-(countsResto[idm] || 0)); // Negativo para el lado izquierdo
+                dataResto.push(-(countsResto[idm] || 0)); 
             });
 
             var option8 = {
@@ -1512,7 +1512,7 @@
                     backgroundColor: 'rgba(255, 255, 255, 0.98)', 
                     borderColor: '#1F0F80', 
                     textStyle: { color: '#17142B' },
-                    extraCssText: 'max-width: 600px; white-space: normal;', // Permite que sea ancho sin desbordar la pantalla
+                    extraCssText: 'max-width: 800px; white-space: normal; box-shadow: 0px 4px 15px rgba(0,0,0,0.1);', // Ampliamos a 800px max
                     formatter: function(params) {
                         let idmOrigen = params.name;
                         let region = params.seriesName;
@@ -1545,50 +1545,59 @@
 
                         // --- Construcción HTML: Cabecera ---
                         let h = `<div style="font-family:'Inter'; font-size:11px; width:100%;">`;
-                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:8px;padding-bottom:4px;">Origen: ${idmOrigen} ➔ ${region}</strong>`;
-                        h += `Total: <b>${totalBarra}</b> publicaciones<br><br>`;
+                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.3em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:10px;padding-bottom:4px;">Origen: ${idmOrigen} ➔ ${region}</strong>`;
+                        h += `<div style="margin-bottom:12px; font-size:1.1em;">Total: <b>${totalBarra}</b> publicaciones</div>`;
                         
-                        // --- Contenedor Flex para las 3 columnas ---
-                        h += `<div style="display: flex; gap: 15px;">`;
+                        // --- Contenedor Flex para las columnas ---
+                        h += `<div style="display: flex; gap: 20px; align-items: flex-start;">`;
 
                         // Columna 1: Idiomas Destino
                         if(topDestinos.length > 0) {
-                            h += `<div style="flex: 1; min-width: 150px;">`;
-                            h += `<span style="color:#27AE60;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Destinos:</span><br>`;
+                            h += `<div style="flex: 1; min-width: 160px;">`;
+                            h += `<span style="color:#27AE60;font-weight:bold;text-transform:uppercase;font-size:10px;display:block;margin-bottom:6px;">Top 5 Destinos:</span>`;
                             topDestinos.forEach((dst,i) => {
                                 let pct = ((dst.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dst.n.substring(0,18)}${dst.n.length>18?'..':''} <b>(${pct}%)</b></span>`;
+                                // Usamos flexbox interior y white-space: normal para permitir saltos de línea limpios
+                                h += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom: 1px dotted #f0f0f0; padding-bottom:3px;">
+                                        <span style="white-space: normal; line-height: 1.3; padding-right: 8px;">${i+1}. ${dst.n}</span>
+                                        <strong style="white-space: nowrap;">${pct}%</strong>
+                                      </div>`;
                             });
                             h += `</div>`;
                         }
 
                         // Columna 2: Editoriales
                         if(topEdits.length > 0) {
-                            // Añadir borde izquierdo si no es la primera columna
-                            let borderStyle = topDestinos.length > 0 ? 'border-left: 1px solid #eee; padding-left: 15px;' : '';
-                            h += `<div style="flex: 1; min-width: 150px; ${borderStyle}">`;
-                            h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Editoriales:</span><br>`;
+                            let borderStyle = topDestinos.length > 0 ? 'border-left: 1px solid #eee; padding-left: 20px;' : '';
+                            h += `<div style="flex: 1; min-width: 180px; ${borderStyle}">`;
+                            h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:10px;display:block;margin-bottom:6px;">Top 5 Editoriales:</span>`;
                             topEdits.forEach((e,i) => {
                                 let pct = ((e.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${e.n.substring(0,18)}${e.n.length>18?'..':''} <b>(${pct}%)</b></span>`;
+                                h += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom: 1px dotted #f0f0f0; padding-bottom:3px;">
+                                        <span style="white-space: normal; line-height: 1.3; padding-right: 8px;">${i+1}. ${e.n}</span>
+                                        <strong style="white-space: nowrap;">${pct}%</strong>
+                                      </div>`;
                             });
                             h += `</div>`;
                         }
 
                         // Columna 3: Dewey (Solo si no hay filtro activo)
                         if(topDeweys.length > 0 && genreFilter === 'TODOS') {
-                            let borderStyle = (topDestinos.length > 0 || topEdits.length > 0) ? 'border-left: 1px solid #eee; padding-left: 15px;' : '';
-                            h += `<div style="flex: 1; min-width: 150px; ${borderStyle}">`;
-                            h += `<span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas:</span><br>`;
+                            let borderStyle = (topDestinos.length > 0 || topEdits.length > 0) ? 'border-left: 1px solid #eee; padding-left: 20px;' : '';
+                            h += `<div style="flex: 1; min-width: 180px; ${borderStyle}">`;
+                            h += `<span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:10px;display:block;margin-bottom:6px;">Top 5 Temáticas:</span>`;
                             topDeweys.forEach((dw,i) => {
                                 let pct = ((dw.c / totalBarra) * 100).toFixed(1);
-                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dw.n.substring(0,18)}${dw.n.length>18?'..':''} <b>(${pct}%)</b></span>`;
+                                h += `<div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom: 1px dotted #f0f0f0; padding-bottom:3px;">
+                                        <span style="white-space: normal; line-height: 1.3; padding-right: 8px;">${i+1}. ${dw.n}</span>
+                                        <strong style="white-space: nowrap;">${pct}%</strong>
+                                      </div>`;
                             });
                             h += `</div>`;
                         }
 
-                        h += `</div>`; // Cierre del contenedor Flex
-                        h += `</div>`; // Cierre del Tooltip
+                        h += `</div>`; // Cierre Flex
+                        h += `</div>`; // Cierre Tooltip
                         
                         return h;
                     }
@@ -1624,10 +1633,15 @@
                 let anos = [...new Set(rawDataV8.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO').sort().reverse();
                 anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
 
-                // Llenar Filtro de Género
+                // Llenar Filtro de Género SIN recortar texto (Se pasa el nombre completo 'g')
                 let selectGenero = document.getElementById('filtroGeneroVis8');
                 let generos = [...new Set(rawDataV8.map(d => d['SUBCATEGORIA.DEWEY']))].filter(g => g && g !== 'SIN DATO').sort();
-                generos.forEach(g => { let opt = document.createElement('option'); opt.value = g; opt.innerHTML = g.length > 30 ? g.substring(0,30) + '...' : g; selectGenero.appendChild(opt); });
+                generos.forEach(g => { 
+                    let opt = document.createElement('option'); 
+                    opt.value = g; 
+                    opt.innerHTML = g; // <-- Aquí quitamos el substring. El navegador adaptará el menú.
+                    selectGenero.appendChild(opt); 
+                });
 
                 selectAno.addEventListener('change', renderVis8);
                 selectGenero.addEventListener('change', renderVis8);
