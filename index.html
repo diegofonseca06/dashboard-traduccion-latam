@@ -373,9 +373,9 @@
                     <p class="chart-description">
                         Brasil y el bloque hispanohablante operan bajo lógicas de traducción distintas. Este gráfico de barras divergentes permite comparar directamente el volumen de publicaciones de Brasil frente al resto de Latinoamérica, segmentado por el idioma original de las obras.
                         <br><br>
-                        El eje vertical central presenta una lista dinámica de los <strong>idiomas de origen más influyentes</strong> (calculada a partir de los 10 más frecuentes en cada región para asegurar representatividad). Hacia la derecha (en azul) se observa el volumen de Brasil, y hacia la izquierda (en violeta) el del resto del continente.
+                        <strong>Un apunte crucial:</strong> Es común observar altos volúmenes de "Español" como lengua de origen dentro de los propios países hispanohablantes. Esto revela un fenómeno fascinante: la traducción interna hacia lenguas indígenas originarias, ediciones bilingües y la traducción hacia el inglés u otras lenguas para exportación.
                         <br><br>
-                        <em>Interacción:</em> Ajuste los filtros de <strong>Año</strong> y <strong>Género</strong> para observar cómo cambian los idiomas protagonistas. <strong>Posicione el cursor sobre cualquier barra</strong> para inspeccionar el <strong>Top 5 de grupos editoriales</strong> y el <strong>Top 5 de temáticas específicas</strong> que integran ese flujo.
+                        <em>Interacción:</em> Ajuste los filtros para observar cómo cambian los protagonistas. <strong>Posicione el cursor sobre cualquier barra</strong> para descubrir hacia qué <strong>Idiomas de Destino</strong> se dirige ese flujo, así como el <strong>Top 5 de grupos editoriales</strong> y temáticas (Dewey) que lo integran.
                     </p>
                     
                     <div class="filter-container">
@@ -1476,7 +1476,7 @@
             if(yearFilter !== 'TODOS') filteredData = filteredData.filter(d => d.ANO === yearFilter);
             if(genreFilter !== 'TODOS') filteredData = filteredData.filter(d => d['SUBCATEGORIA.DEWEY'] === genreFilter);
 
-            // 1. Determinar el Top 10 de Idiomas para cada región (Excluyendo SIN IDENTIFICAR)
+            // 1. Determinar el Top 10 de Idiomas Origen para cada región (Excluyendo SIN IDENTIFICAR)
             let countsBrasil = {}, countsResto = {};
             
             filteredData.forEach(d => {
@@ -1511,15 +1511,25 @@
                     trigger: 'item',
                     backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
                     formatter: function(params) {
-                        let idm = params.name;
+                        let idmOrigen = params.name;
                         let region = params.seriesName; // 'BRASIL' o 'RESTO DE LATAM'
                         let totalBarra = Math.abs(params.value);
                         
                         // Filtrar subconjunto exacto para el Tooltip
                         let subData = filteredData.filter(d => 
-                            d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idm && 
+                            d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idmOrigen && 
                             d.REGION_BRASIL_LATAM === region
                         );
+
+                        // Calcular Top 5 IDIOMAS DESTINO (NUEVO)
+                        let destinos = {};
+                        subData.forEach(d => {
+                            let dst = d['IDIOMA.ESTANDARIZADO.COMPLETO'];
+                            if(dst && dst !== 'SIN DATO' && dst !== 'SIN IDENTIFICAR') {
+                                destinos[dst] = (destinos[dst] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                            }
+                        });
+                        let topDestinos = Object.keys(destinos).map(k=>({n:k, c:destinos[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
                         // Calcular Top 5 Editoriales
                         let edits = {};
@@ -1537,10 +1547,21 @@
                         });
                         let topDeweys = Object.keys(deweys).map(k=>({n:k, c:deweys[k]})).sort((a,b)=>b.c-a.c).slice(0, 5);
 
+                        // Construcción del HTML del Tooltip
                         let h = `<div style="font-family:'Inter'; font-size:11px; min-width:260px;">`;
-                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:8px;padding-bottom:4px;">${idm} ➔ ${region}</strong>`;
+                        h += `<strong style="font-family:'Playfair Display',serif;font-size:1.2em;color:#1F0F80;border-bottom:1px solid #eee;display:block;margin-bottom:8px;padding-bottom:4px;">Origen: ${idmOrigen} ➔ ${region}</strong>`;
                         h += `Total: <b>${totalBarra}</b> publicaciones<br><br>`;
                         
+                        // Sección Idiomas Destino
+                        if(topDestinos.length > 0) {
+                            h += `<span style="color:#27AE60;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Idiomas de Destino:</span><br>`;
+                            topDestinos.forEach((dst,i) => {
+                                let pct = ((dst.c / totalBarra) * 100).toFixed(1);
+                                h += `<span style="display:block;margin-top:2px;">${i+1}. ${dst.n.substring(0,25)} <b>(${pct}%)</b></span>`;
+                            });
+                            h += `<br>`;
+                        }
+
                         // Sección Editoriales
                         if(topEdits.length > 0) {
                             h += `<span style="color:#006DF7;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Grupos Editoriales:</span><br>`;
@@ -1548,11 +1569,12 @@
                                 let pct = ((e.c / totalBarra) * 100).toFixed(1);
                                 h += `<span style="display:block;margin-top:2px;">${i+1}. ${e.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
                             });
+                            h += `<br>`;
                         }
 
                         // Sección Dewey (Solo si no hay un género ya seleccionado en el filtro)
                         if(topDeweys.length > 0 && genreFilter === 'TODOS') {
-                            h += `<br><span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas (Dewey):</span><br>`;
+                            h += `<span style="color:#817BA6;font-weight:bold;text-transform:uppercase;font-size:9px;">Top 5 Temáticas (Dewey):</span><br>`;
                             topDeweys.forEach((dw,i) => {
                                 let pct = ((dw.c / totalBarra) * 100).toFixed(1);
                                 h += `<span style="display:block;margin-top:2px;">${i+1}. ${dw.n.substring(0,25)}... <b>(${pct}%)</b></span>`;
