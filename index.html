@@ -477,36 +477,50 @@
         <div class="container">
             <div class="row align-items-center">
                 
-                <div class="col-lg-5 delay-text">
-                    <h2 class="chart-title">Gigantes y Pequeños: La Estructura del Esfuerzo Editorial</h2>
-                    <p class="chart-description text-start">
-                        ¿Cómo se distribuye la labor de traducción entre las editoriales comerciales y universitarias? Este gráfico utiliza <strong>deciles</strong> para dividir al conjunto de editoriales en 10 grupos iguales, ordenados desde las más productivas hasta las más selectas.
+                <div class="col-12 delay-text mb-4 text-center">
+                    <h2 class="chart-title">La Pirámide Editorial: Concentración y Diversidad Lingüística</h2>
+                    <p class="chart-description text-start" style="max-width: 950px; margin: 0 auto;">
+                        Este análisis divide el universo de editoriales en 10 grupos de igual tamaño (deciles), ordenados desde las que poseen los catálogos de traducción más extensos hasta las más selectas.
                         <br><br>
-                        Las <strong>barras</strong> muestran el promedio de obras traducidas por cada editorial en ese bloque. Es aquí donde solemos ver el peso de los grandes grupos. Por otro lado, la <strong>curva</strong> indica cuántas editoriales conforman ese segmento, revelando la inmensa cantidad de actores que operan con catálogos pequeños pero fundamentales para la diversidad cultural.
+                        El <strong>'Top 10%'</strong> agrupa a los grandes motores industriales del continente. Los segmentos siguientes representan la "larga cola" del mercado. Aquí comparamos dos dimensiones clave:
                         <br><br>
-                        <em>Interacción:</em> Ajuste el país o el año para observar cómo cambia la concentración del mercado. <strong>Pase el cursor sobre los bloques</strong> para conocer el promedio exacto de publicaciones y la cantidad de firmas que integran cada nivel de productividad.
+                        1. <strong>La Composición (Barras):</strong> Muestra qué porcentaje de la producción de ese grupo corresponde a cada idioma de origen. 
+                        2. <strong>La Productividad (Curva):</strong> Indica cuántos libros traduce, en promedio, una sola editorial perteneciente a ese segmento.
+                        <br><br>
+                        <em>Interacción:</em> Use los interruptores superiores para aislar la vista de diversidad (%) o la de volumen promedio. <strong>Pase el cursor sobre las barras</strong> para ver el promedio exacto, la desviación estándar (la brecha entre editoriales del mismo grupo) y el desglose lingüístico.
                     </p>
-                    
-                    <div class="filter-container">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Ámbito Geográfico:</label>
-                                <select id="filtroPaisVis12" class="custom-select" style="font-size: 1.1rem; width: 100%;">
-                                    <option value="TODOS">Todos los países</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Año de Publicación:</label>
-                                <select id="filtroAnoVis12" class="custom-select" style="font-size: 1.1rem; width: 100%;">
-                                    <option value="TODOS">Todos los años</option>
-                                </select>
-                            </div>
+                </div>
+
+                <div class="col-12 mb-4 d-flex flex-wrap justify-content-center gap-4 align-items-end">
+                    <div class="filter-box">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Ámbito Geográfico:</label>
+                        <select id="filtroPaisVis12" class="custom-select" style="font-size: 1.1rem; min-width: 220px;">
+                            <option value="TODOS">Todos los países</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-box">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Año:</label>
+                        <select id="filtroAnoVis12" class="custom-select" style="font-size: 1.1rem; min-width: 150px;">
+                            <option value="TODOS">Todos los años</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-box pb-2" style="border-left: 2px solid #eee; padding-left: 20px;">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-2" style="font-family: sans-serif;">Capas de Datos:</label>
+                        <div class="form-check form-switch form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="toggleBarrasV12" checked style="cursor:pointer;">
+                            <label class="form-check-label fw-bold" for="toggleBarrasV12" style="color:#006DF7;">Barras (% Diversidad)</label>
+                        </div>
+                        <div class="form-check form-switch form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="toggleCurvaV12" checked style="cursor:pointer;">
+                            <label class="form-check-label fw-bold" for="toggleCurvaV12" style="color:#E74C3C;">Curva (Promedio)</label>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-7">
-                    <div id="vis12" class="chart-container" style="height: 600px;"></div>
+                <div class="col-12">
+                    <div id="vis12" class="chart-container" style="height: 650px; width: 100%;"></div>
                 </div>
 
             </div>
@@ -1969,101 +1983,148 @@
         });
 
         // ---------------------------------------------------------
-        // LÓGICA DE VISUALIZACIÓN 12 (Concentración por Deciles)
+        // LÓGICA DE VISUALIZACIÓN 12 (Deciles + Diversidad Lingüística)
         // ---------------------------------------------------------
         var chart12 = echarts.init(document.getElementById('vis12'));
         var rawDataV12 = [];
+        
+        // Mapa de colores fijo para consistencia lingüística
+        const colorMapIdiomas = {
+            'INGLÉS': '#1F0F80', 'FRANCÉS': '#006DF7', 'ALEMÁN': '#817BA6', 
+            'ITALIANO': '#A09CBE', 'PORTUGUÉS': '#17142B', 'JAPONÉS': '#E74C3C',
+            'CHINO': '#27AE60', 'RUSO': '#F1C40F', 'OTROS': '#D5D8DC'
+        };
+        const defaultPalette = ['#3498DB', '#E67E22', '#9B59B6', '#1ABC9C', '#D35400', '#2980B9', '#16A085'];
+
+        function getIdiomaColor(idioma, index) {
+            if (colorMapIdiomas[idioma]) return colorMapIdiomas[idioma];
+            return defaultPalette[index % defaultPalette.length];
+        }
 
         function renderVis12() {
-            let paisFilter = document.getElementById('filtroPaisVis12').value;
-            let anoFilter = document.getElementById('filtroAnoVis12').value;
+            let paisVal = document.getElementById('filtroPaisVis12').value;
+            let anoVal = document.getElementById('filtroAnoVis12').value;
+            let showBars = document.getElementById('toggleBarrasV12').checked;
+            let showLine = document.getElementById('toggleCurvaV12').checked;
 
-            // Filtrado instantáneo (La data ya viene pre-calculada por deciles en el CSV)
-            let data = rawDataV12.filter(d => d.PAIS === paisFilter && d.ANO === anoFilter);
+            // 1. Filtrar Data Larga
+            let filtered = rawDataV12.filter(d => d.PAIS === paisVal && d.ANO === anoVal);
             
-            // Ordenar por DECILE_ORDER para asegurar el flujo de Top 10% a 100%
-            data.sort((a, b) => parseInt(a.DECILE_ORDER) - parseInt(b.DECILE_ORDER));
+            // Obtener etiquetas únicas de deciles ordenados
+            let decilesLabels = [...new Set(filtered.map(d => d.DECILE_LABEL))].sort((a,b) => {
+                let orderA = filtered.find(x => x.DECILE_LABEL === a).DECILE_ORDER;
+                let orderB = filtered.find(x => x.DECILE_LABEL === b).DECILE_ORDER;
+                return orderA - orderB;
+            });
 
-            let categories = data.map(d => d.DECILE_LABEL);
-            let avgRecords = data.map(d => parseFloat(d.PROMEDIO_REGISTROS));
-            let qtyPublishers = data.map(d => parseInt(d.CANTIDAD_EDITORIALES));
+            // 2. Preparar Series de Idiomas (Barras 100%)
+            let idiomasPresentes = [...new Set(filtered.map(d => d.IDIOMA_ORIGEN))];
+            let seriesData = [];
+
+            if (showBars) {
+                idiomasPresentes.forEach((idm, idx) => {
+                    let dataSerie = decilesLabels.map(label => {
+                        let row = filtered.find(d => d.DECILE_LABEL === label && d.IDIOMA_ORIGEN === idm);
+                        if (!row) return 0;
+                        
+                        // Calcular porcentaje relativo al total de ese decil
+                        let totalDecil = filtered.filter(d => d.DECILE_LABEL === label)
+                                                 .reduce((s, r) => s + parseInt(r.CANTIDAD_OBRAS_IDIOMA), 0);
+                        return totalDecil > 0 ? ((parseInt(row.CANTIDAD_OBRAS_IDIOMA) / totalDecil) * 100).toFixed(2) : 0;
+                    });
+
+                    seriesData.push({
+                        name: idm, type: 'bar', stack: 'total',
+                        data: dataSerie,
+                        itemStyle: { color: getIdiomaColor(idm, idx) },
+                        emphasis: { focus: 'series' }
+                    });
+                });
+            }
+
+            // 3. Preparar Serie de Productividad (Curva Promedio)
+            if (showLine) {
+                let lineData = decilesLabels.map(label => {
+                    let row = filtered.find(d => d.DECILE_LABEL === label);
+                    return row ? parseFloat(row.PROMEDIO_REGISTROS) : 0;
+                });
+
+                seriesData.push({
+                    name: 'Promedio de Obras',
+                    type: 'line', yAxisIndex: 1,
+                    data: lineData,
+                    symbolSize: 10,
+                    itemStyle: { color: '#E74C3C', borderWidth: 2 },
+                    lineStyle: { width: 4, shadowBlur: 5, shadowColor: 'rgba(0,0,0,0.3)' },
+                    z: 10 // Asegura que la línea esté por encima de las barras
+                });
+            }
 
             var option12 = {
                 tooltip: {
                     trigger: 'axis',
-                    axisPointer: { type: 'shadow' },
                     backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
-                    formatter: function (params) {
-                        let idx = params[0].dataIndex;
-                        let decil = params[0].name;
-                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:200px;">`;
-                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">Rango: ${decil}</strong>`;
-                        h += `<span style="color:#006DF7; font-weight:bold;">Promedio de Obras:</span> <b>${avgRecords[idx]}</b> por editorial<br>`;
-                        h += `<span style="color:#817BA6; font-weight:bold;">Población del bloque:</span> <b>${qtyPublishers[idx]}</b> editoriales`;
+                    formatter: function(params) {
+                        let label = params[0].axisValue;
+                        let rows = filtered.filter(d => d.DECILE_LABEL === label);
+                        if (rows.length === 0) return '';
+                        
+                        let avg = rows[0].PROMEDIO_REGISTROS;
+                        let std = rows[0].DESVIACION_ESTANDAR;
+                        let eds = rows[0].CANTIDAD_EDITORIALES;
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
+                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">Segmento: ${label}</strong>`;
+                        h += `Promedio de producción: <b>${avg} ± ${std}</b> obras/ed.<br>`;
+                        h += `Población del grupo: <b>${eds}</b> editoriales<br><br>`;
+                        
+                        h += `<span style="color:#17142B; font-weight:bold; text-transform:uppercase; font-size:9px;">Composición lingüística:</span><br/>`;
+                        
+                        // Solo mostrar idiomas en el tooltip que tengan valor en este decil
+                        params.filter(p => p.seriesType === 'bar' && p.value > 0).forEach(p => {
+                            h += `<span style="display:flex; justify-content:space-between; margin-top:3px;">
+                                    <span><span style="display:inline-block;margin-right:5px;border-radius:10px;width:9px;height:9px;background-color:${p.color};"></span>${p.seriesName}</span>
+                                    <strong style="margin-left:15px;">${p.value}%</strong>
+                                  </span>`;
+                        });
                         h += `</div>`;
                         return h;
                     }
                 },
-                legend: { data: ['Promedio de Obras', 'Cantidad de Editoriales'], bottom: 10, textStyle: { fontFamily: 'Lora' } },
-                grid: { left: '10%', right: '10%', bottom: '20%', top: '10%', containLabel: true },
+                legend: { type: 'scroll', bottom: 0, textStyle: { fontFamily: 'Inter', fontSize: 10 } },
+                grid: { left: '5%', right: '5%', bottom: '15%', top: '10%', containLabel: true },
                 xAxis: {
-                    type: 'category',
-                    data: categories,
+                    type: 'category', data: decilesLabels,
                     axisLabel: { interval: 0, rotate: 30, fontFamily: 'Inter', fontSize: 10, fontWeight: 'bold' }
                 },
                 yAxis: [
-                    {
-                        type: 'value',
-                        name: 'Promedio de Obras',
-                        nameTextStyle: { color: '#006DF7', fontWeight: 'bold', fontFamily: 'Lora' },
-                        axisLabel: { color: '#006DF7' },
-                        splitLine: { lineStyle: { type: 'dashed', opacity: 0.3 } }
+                    { 
+                        type: 'value', max: 100, show: showBars,
+                        name: 'Distribución (%)', nameTextStyle: { fontFamily: 'Lora', fontStyle: 'italic' },
+                        axisLabel: { formatter: '{value}%' }
                     },
-                    {
-                        type: 'value',
-                        name: 'Cantidad de Editoriales',
-                        nameTextStyle: { color: '#817BA6', fontWeight: 'bold', fontFamily: 'Lora' },
-                        axisLabel: { color: '#817BA6' },
+                    { 
+                        type: 'value', show: showLine,
+                        name: 'Promedio Obras', nameTextStyle: { fontFamily: 'Lora', fontStyle: 'italic' },
                         splitLine: { show: false }
                     }
                 ],
-                series: [
-                    {
-                        name: 'Promedio de Obras',
-                        type: 'bar',
-                        data: avgRecords,
-                        itemStyle: { 
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: '#006DF7' },
-                                { offset: 1, color: '#1F0F80' }
-                            ]),
-                            borderRadius: [4, 4, 0, 0]
-                        }
-                    },
-                    {
-                        name: 'Cantidad de Editoriales',
-                        type: 'line',
-                        yAxisIndex: 1,
-                        data: qtyPublishers,
-                        symbolSize: 8,
-                        smooth: true,
-                        itemStyle: { color: '#817BA6' },
-                        lineStyle: { width: 3, type: 'solid' },
-                        areaStyle: { color: 'rgba(129, 123, 166, 0.1)' }
-                    }
-                ]
+                series: seriesData
             };
 
             chart12.setOption(option12, true);
         }
 
-        // Carga de datos mediante PapaParse
-        Papa.parse('data/Cruce_Concentracion_Deciles.csv', {
+        // Listeners de Toggles
+        document.getElementById('toggleBarrasV12').addEventListener('change', renderVis12);
+        document.getElementById('toggleCurvaV12').addEventListener('change', renderVis12);
+
+        // Carga de datos
+        Papa.parse('data/Cruce_Concentracion_Idiomas_Deciles.csv', {
             download: true, header: true, skipEmptyLines: true,
             complete: function(results) {
                 rawDataV12 = results.data;
                 
-                // Poblar filtros
                 let selPais = document.getElementById('filtroPaisVis12');
                 let selAno = document.getElementById('filtroAnoVis12');
                 
@@ -2073,14 +2134,12 @@
                 paises.forEach(p => { let o = document.createElement('option'); o.value = p; o.innerHTML = p; selPais.appendChild(o); });
                 anos.forEach(a => { let o = document.createElement('option'); o.value = a; o.innerHTML = a; selAno.appendChild(o); });
                 
-                // Listeners
                 selPais.addEventListener('change', renderVis12);
                 selAno.addEventListener('change', renderVis12);
                 
-                renderVis12(); // Render inicial
+                renderVis12();
             }
         });
-
 
         
         // ---------------------------------------------------------
