@@ -473,6 +473,47 @@
         </div>
     </section>
 
+    <section id="seccionVis12" class="visualization-section reveal">
+        <div class="container">
+            <div class="row align-items-center">
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">Gigantes y Pequeños: La Estructura del Esfuerzo Editorial</h2>
+                    <p class="chart-description text-start">
+                        ¿Cómo se distribuye la labor de traducción entre las editoriales comerciales y universitarias? Este gráfico utiliza <strong>deciles</strong> para dividir al conjunto de editoriales en 10 grupos iguales, ordenados desde las más productivas hasta las más selectas.
+                        <br><br>
+                        Las <strong>barras</strong> muestran el promedio de obras traducidas por cada editorial en ese bloque. Es aquí donde solemos ver el peso de los grandes grupos. Por otro lado, la <strong>curva</strong> indica cuántas editoriales conforman ese segmento, revelando la inmensa cantidad de actores que operan con catálogos pequeños pero fundamentales para la diversidad cultural.
+                        <br><br>
+                        <em>Interacción:</em> Ajuste el país o el año para observar cómo cambia la concentración del mercado. <strong>Pase el cursor sobre los bloques</strong> para conocer el promedio exacto de publicaciones y la cantidad de firmas que integran cada nivel de productividad.
+                    </p>
+                    
+                    <div class="filter-container">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Ámbito Geográfico:</label>
+                                <select id="filtroPaisVis12" class="custom-select" style="font-size: 1.1rem; width: 100%;">
+                                    <option value="TODOS">Todos los países</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Año de Publicación:</label>
+                                <select id="filtroAnoVis12" class="custom-select" style="font-size: 1.1rem; width: 100%;">
+                                    <option value="TODOS">Todos los años</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div id="vis12" class="chart-container" style="height: 600px;"></div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    
+
     <section id="seccionVis9" class="visualization-section reveal">
         <div class="container">
             <div class="row align-items-center">
@@ -1928,6 +1969,121 @@
         });
 
         // ---------------------------------------------------------
+        // LÓGICA DE VISUALIZACIÓN 12 (Concentración por Deciles)
+        // ---------------------------------------------------------
+        var chart12 = echarts.init(document.getElementById('vis12'));
+        var rawDataV12 = [];
+
+        function renderVis12() {
+            let paisFilter = document.getElementById('filtroPaisVis12').value;
+            let anoFilter = document.getElementById('filtroAnoVis12').value;
+
+            // Filtrado instantáneo (La data ya viene pre-calculada por deciles en el CSV)
+            let data = rawDataV12.filter(d => d.PAIS === paisFilter && d.ANO === anoFilter);
+            
+            // Ordenar por DECILE_ORDER para asegurar el flujo de Top 10% a 100%
+            data.sort((a, b) => parseInt(a.DECILE_ORDER) - parseInt(b.DECILE_ORDER));
+
+            let categories = data.map(d => d.DECILE_LABEL);
+            let avgRecords = data.map(d => parseFloat(d.PROMEDIO_REGISTROS));
+            let qtyPublishers = data.map(d => parseInt(d.CANTIDAD_EDITORIALES));
+
+            var option12 = {
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    formatter: function (params) {
+                        let idx = params[0].dataIndex;
+                        let decil = params[0].name;
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:200px;">`;
+                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">Rango: ${decil}</strong>`;
+                        h += `<span style="color:#006DF7; font-weight:bold;">Promedio de Obras:</span> <b>${avgRecords[idx]}</b> por editorial<br>`;
+                        h += `<span style="color:#817BA6; font-weight:bold;">Población del bloque:</span> <b>${qtyPublishers[idx]}</b> editoriales`;
+                        h += `</div>`;
+                        return h;
+                    }
+                },
+                legend: { data: ['Promedio de Obras', 'Cantidad de Editoriales'], bottom: 10, textStyle: { fontFamily: 'Lora' } },
+                grid: { left: '10%', right: '10%', bottom: '20%', top: '10%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: categories,
+                    axisLabel: { interval: 0, rotate: 30, fontFamily: 'Inter', fontSize: 10, fontWeight: 'bold' }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: 'Promedio de Obras',
+                        nameTextStyle: { color: '#006DF7', fontWeight: 'bold', fontFamily: 'Lora' },
+                        axisLabel: { color: '#006DF7' },
+                        splitLine: { lineStyle: { type: 'dashed', opacity: 0.3 } }
+                    },
+                    {
+                        type: 'value',
+                        name: 'Cantidad de Editoriales',
+                        nameTextStyle: { color: '#817BA6', fontWeight: 'bold', fontFamily: 'Lora' },
+                        axisLabel: { color: '#817BA6' },
+                        splitLine: { show: false }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'Promedio de Obras',
+                        type: 'bar',
+                        data: avgRecords,
+                        itemStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#006DF7' },
+                                { offset: 1, color: '#1F0F80' }
+                            ]),
+                            borderRadius: [4, 4, 0, 0]
+                        }
+                    },
+                    {
+                        name: 'Cantidad de Editoriales',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        data: qtyPublishers,
+                        symbolSize: 8,
+                        smooth: true,
+                        itemStyle: { color: '#817BA6' },
+                        lineStyle: { width: 3, type: 'solid' },
+                        areaStyle: { color: 'rgba(129, 123, 166, 0.1)' }
+                    }
+                ]
+            };
+
+            chart12.setOption(option12, true);
+        }
+
+        // Carga de datos mediante PapaParse
+        Papa.parse('data/Cruce_Concentracion_Deciles.csv', {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                rawDataV12 = results.data;
+                
+                // Poblar filtros
+                let selPais = document.getElementById('filtroPaisVis12');
+                let selAno = document.getElementById('filtroAnoVis12');
+                
+                let paises = [...new Set(rawDataV12.map(d => d.PAIS))].filter(p => p !== 'TODOS').sort();
+                let anos = [...new Set(rawDataV12.map(d => d.ANO))].filter(a => a !== 'TODOS').sort().reverse();
+                
+                paises.forEach(p => { let o = document.createElement('option'); o.value = p; o.innerHTML = p; selPais.appendChild(o); });
+                anos.forEach(a => { let o = document.createElement('option'); o.value = a; o.innerHTML = a; selAno.appendChild(o); });
+                
+                // Listeners
+                selPais.addEventListener('change', renderVis12);
+                selAno.addEventListener('change', renderVis12);
+                
+                renderVis12(); // Render inicial
+            }
+        });
+
+
+        
+        // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 9 (Diagrama Relacional Sankey: Idiomas a Géneros)
         // ---------------------------------------------------------
         var chart9 = echarts.init(document.getElementById('vis9'));
@@ -2084,6 +2240,7 @@
             if(typeof chart9 !== 'undefined') chart9.resize();
             if(typeof chart10 !== 'undefined') chart10.resize();
             if(typeof chart11 !== 'undefined') chart11.resize();
+            if(typeof chart12 !== 'undefined') chart12.resize();
         });
     </script>
 </body>
