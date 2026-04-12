@@ -812,16 +812,38 @@
             let filteredData = rawDataV1;
             if(yearFilter !== 'TODOS') filteredData = rawDataV1.filter(d => d.ANO === yearFilter);
 
-            let countries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO').sort();
-            let comerciales = [], universitarias = [];
+            // 1. Obtener lista única de países (sin ordenar alfabéticamente todavía)
+            let uniqueCountries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO');
+            
+            // 2. Calcular los totales por país y guardarlos en un arreglo de objetos
+            let countryStats = [];
 
-            countries.forEach(pais => {
+            uniqueCountries.forEach(pais => {
                 let sumC = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL COMERCIAL')
                                        .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
                 let sumU = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL UNIVERSITARIA')
                                        .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                comerciales.push(sumC); universitarias.push(sumU);
+                
+                let total = sumC + sumU;
+                
+                // Solo incluimos el país si tiene datos en el filtro actual
+                if (total > 0) {
+                    countryStats.push({
+                        pais: pais,
+                        comercial: sumC,
+                        universitaria: sumU,
+                        total: total
+                    });
+                }
             });
+
+            // 3. ORDENAR DINÁMICAMENTE de menor a mayor según el total acumulado
+            countryStats.sort((a, b) => a.total - b.total);
+
+            // 4. Extraer los arreglos finales ya ordenados para inyectarlos en ECharts
+            let countries = countryStats.map(item => item.pais);
+            let comerciales = countryStats.map(item => item.comercial);
+            let universitarias = countryStats.map(item => item.universitaria);
 
             var option = {
                 tooltip: { 
