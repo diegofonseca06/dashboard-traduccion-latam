@@ -138,6 +138,47 @@
         </div>
     </section>
 
+
+    <section id="seccionVis11" class="visualization-section bg-alternate reveal">
+        <div class="container">
+            <div class="row align-items-center">
+                
+                <div class="col-lg-5 delay-text">
+                    <h2 class="chart-title">Originalidad vs. Importación: El Balance Literario</h2>
+                    <p class="chart-description">
+                        ¿Qué tanto depende el ecosistema literario de un país de las obras extranjeras? Esta visualización compara el volumen de <strong>Obras Originales</strong> (no traducidas) frente a las <strong>Obras Traducidas</strong> (purificadas según criterios de origen).
+                        <br><br>
+                        A diferencia de otros gráficos, aquí todas las barras alcanzan el 100%. Esto permite comparar la <strong>vocación editorial</strong> de cada nación, independientemente de su tamaño de mercado.
+                        <br><br>
+                        <em>Interacción:</em> Utilice los filtros para observar la evolución por <strong>Año</strong> o aislar un <strong>País</strong> específico. Al <strong>posicionar el cursor sobre cada segmento</strong> de la barra, descubrirá el total de registros y el <strong>Top 5 de grupos editoriales</strong> que dominan la producción en esa categoría.
+                    </p>
+                    
+                    <div class="filter-container">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año:</label>
+                                <select id="filtroAnoVis11" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Todos los años</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por País:</label>
+                                <select id="filtroPaisVis11" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                                    <option value="TODOS">Todos los países</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div id="vis11" class="chart-container" style="height: 600px;"></div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <section id="seccionVis10" class="visualization-section bg-alternate reveal">
         <div class="container">
             <div class="row align-items-center flex-row-reverse">
@@ -503,6 +544,133 @@
 
         const axisTextStyle = { fontFamily: 'Lora', color: '#17142B', fontStyle: 'italic' };
 
+        // ---------------------------------------------------------
+        // LÓGICA DE VISUALIZACIÓN 11 (Barras 100% - Traducciones vs Originales)
+        // ---------------------------------------------------------
+        var chart11 = echarts.init(document.getElementById('vis11'));
+        var rawDataV11 = [];
+
+        function renderVis11() {
+            let anoFilter = document.getElementById('filtroAnoVis11').value;
+            let paisFilter = document.getElementById('filtroPaisVis11').value;
+
+            let data = rawDataV11;
+            if (anoFilter !== 'TODOS') data = data.filter(d => d.ANO === anoFilter);
+            if (paisFilter !== 'TODOS') data = data.filter(d => d.PAIS === paisFilter);
+
+            // 1. Agrupar por País y Estado de Traducción
+            let paisesSet = [...new Set(data.map(d => d.PAIS))].sort();
+            let seriesTraducido = [];
+            let seriesOriginal = [];
+
+            paisesSet.forEach(pais => {
+                let dataPais = data.filter(d => d.PAIS === pais);
+                
+                let countTrad = dataPais.filter(d => d.ESTADO_TRADUCCION === 'TRADUCIDO')
+                                        .reduce((sum, r) => sum + parseInt(r.CANTIDAD_REGISTROS || 0), 0);
+                let countOrig = dataPais.filter(d => d.ESTADO_TRADUCCION === 'NO TRADUCIDO')
+                                        .reduce((sum, r) => sum + parseInt(r.CANTIDAD_REGISTROS || 0), 0);
+                
+                let total = countTrad + countOrig;
+                
+                if (total > 0) {
+                    // Calculamos el porcentaje para el eje Y, pero guardamos el valor real para el tooltip
+                    seriesTraducido.push({
+                        value: ((countTrad / total) * 100).toFixed(2),
+                        realValue: countTrad,
+                        pais: pais
+                    });
+                    seriesOriginal.push({
+                        value: ((countOrig / total) * 100).toFixed(2),
+                        realValue: countOrig,
+                        pais: pais
+                    });
+                } else {
+                    seriesTraducido.push({ value: 0, realValue: 0, pais: pais });
+                    seriesOriginal.push({ value: 0, realValue: 0, pais: pais });
+                }
+            });
+
+            var option11 = {
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80', textStyle: { color: '#17142B' },
+                    extraCssText: 'max-width: 400px; white-space: normal;',
+                    formatter: function (params) {
+                        let estado = params.seriesName;
+                        let pais = params.data.pais;
+                        let porcentaje = params.data.value;
+                        let totalRegistros = params.data.realValue;
+                        
+                        // Buscar Top 5 Editoriales para este segmento exacto
+                        let subData = data.filter(d => d.PAIS === pais && d.ESTADO_TRADUCCION === (estado === 'Traducciones' ? 'TRADUCIDO' : 'NO TRADUCIDO'));
+                        let editsMap = {};
+                        subData.forEach(d => {
+                            let ed = d.GRUPO_EDITORIAL_COMPLETO;
+                            if(ed && ed !== 'SIN DATO') editsMap[ed] = (editsMap[ed] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                        });
+                        let topEdits = Object.keys(editsMap).map(k => ({ n: k, v: editsMap[k] })).sort((a,b) => b.v - a.v).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
+                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">${pais} - ${estado}</strong>`;
+                        h += `Proporción: <b>${porcentaje}%</b><br>`;
+                        h += `Total de registros: <b>${totalRegistros}</b><br><br>`;
+                        
+                        if (topEdits.length > 0) {
+                            h += `<span style="color:#006DF7; font-weight:bold; text-transform:uppercase; font-size:10px;">Top 5 Grupos Editoriales:</span><br/>`;
+                            topEdits.forEach((e, i) => {
+                                h += `<span style="display:block; margin-top:4px; white-space: normal;"><b>${i+1}.</b> ${e.n} <b>(${e.v})</b></span>`;
+                            });
+                        }
+                        h += `</div>`;
+                        return h;
+                    }
+                },
+                legend: { data: ['Obras Originales', 'Traducciones'], bottom: 0, textStyle: { fontFamily: 'Lora' } },
+                grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: paisesSet, 
+                    axisLabel: { rotate: 45, fontFamily: 'Inter', fontSize: 10 } 
+                },
+                yAxis: { 
+                    type: 'value', 
+                    max: 100, 
+                    name: 'Porcentaje (%)', 
+                    nameTextStyle: axisTextStyle,
+                    axisLabel: { formatter: '{value}%' }
+                },
+                color: ['#817BA6', '#006DF7'], // Violeta para Originales, Azul brillante para Traducciones
+                series: [
+                    { name: 'Obras Originales', type: 'bar', stack: 'total', data: seriesOriginal, emphasis: { focus: 'series' } },
+                    { name: 'Traducciones', type: 'bar', stack: 'total', data: seriesTraducido, emphasis: { focus: 'series' } }
+                ]
+            };
+
+            chart11.setOption(option11, true);
+        }
+
+        Papa.parse('data/Cruce_Traducciones_vs_NoTraducciones_Pais.csv', {
+            download: true, header: true,
+            complete: function(results) {
+                rawDataV11 = results.data;
+                
+                let selectAno = document.getElementById('filtroAnoVis11');
+                let selectPais = document.getElementById('filtroPaisVis11');
+                
+                let anos = [...new Set(rawDataV11.map(d => d.ANO))].filter(a => a && a !== 'SIN DATO').sort().reverse();
+                let paises = [...new Set(rawDataV11.map(d => d.PAIS))].filter(p => p && p !== 'SIN DATO').sort();
+
+                anos.forEach(a => { let opt = document.createElement('option'); opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt); });
+                paises.forEach(p => { let opt = document.createElement('option'); opt.value = p; opt.innerHTML = p; selectPais.appendChild(opt); });
+
+                selectAno.addEventListener('change', renderVis11);
+                selectPais.addEventListener('change', renderVis11);
+                renderVis11();
+            }
+        });
+
+        
 
         // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 10 (Sankey Global con Filtrado Jerárquico)
