@@ -292,30 +292,51 @@
 
 
     
-    <section class="visualization-section bg-alternate reveal">
+    <section id="seccionVis4" class="visualization-section bg-alternate reveal">
         <div class="container">
             <div class="row align-items-center">
                 
-                <div class="col-lg-5 delay-text">
-                    <h2 class="chart-title">Las Voces Originales: Evolución Histórica de la Lengua</h2>
-                    <p class="chart-description">
-                        La traducción literaria funciona como un mapa de intercambio cultural, revelando las lenguas de origen que nutren el catálogo de la región. Al observar el periodo 2010-2025, es posible rastrear cómo la diversidad de estos idiomas se expande o se contrae.
+                <div class="col-12 delay-text mb-4 text-center">
+                    <h2 class="chart-title">Dinámicas del Catálogo: Evolución y Peso Lingüístico</h2>
+                    <p class="chart-description text-start" style="max-width: 900px; margin: 0 auto;">
+                        Este análisis dual permite observar cómo cambia la composición de idiomas a lo largo del tiempo. Las <strong>barras (proporción)</strong> muestran el peso relativo de cada lengua, mientras que la <strong>curva (volumen)</strong> indica el crecimiento real del mercado.
                         <br><br>
-                        El siguiente gráfico de áreas apiladas ilustra esta evolución mostrando los <strong>10 idiomas originales más frecuentes</strong> (excluyendo aquellos sin identificar). El grosor de cada franja refleja el volumen de obras literarias traducidas desde ese idioma en un año determinado.
-                        <br><br>
-                        <em>Interacción:</em> Utilice el menú desplegable para seleccionar un <strong>país de publicación</strong>. El gráfico recalculará automáticamente cuáles fueron los 10 idiomas predominantes para ese territorio a lo largo de la década. Pase el cursor sobre el gráfico para examinar las cifras exactas año por año.
+                        <em>Interacción:</em> El eje horizontal organiza los años de menor a mayor producción total. Utilice los filtros para cambiar el escenario lingüístico o el país. <strong>Haga clic en los segmentos de las barras</strong> para descubrir el Top 5 de grupos editoriales que lideran cada flujo.
                     </p>
-                    
-                    <div class="filter-container">
-                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por País de Publicación:</label>
-                        <select id="filtroPaisVis4" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
+                </div>
+
+                <div class="col-12 mb-4 d-flex flex-wrap justify-content-center gap-4 align-items-end">
+                    <div class="filter-box">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Escenario Lingüístico:</label>
+                        <select id="filtroFlujoVis4" class="custom-select" style="font-size: 1.1rem;">
+                            <option value="ingles">Traducidas DESDE el Inglés</option>
+                            <option value="portugues">Traducidas DESDE el Portugués</option>
+                            <option value="espanol">Traducidas HACIA el Español</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-box">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">País de Publicación:</label>
+                        <select id="filtroPaisVis4" class="custom-select" style="font-size: 1.1rem;">
                             <option value="TODOS">Todos los países (Continental)</option>
-                            </select>
+                        </select>
+                    </div>
+
+                    <div class="filter-box pb-2" style="border-left: 2px solid #ccc; padding-left: 20px;">
+                        <label class="text-muted small text-uppercase fw-bold d-block mb-2" style="font-family: sans-serif;">Visualizar:</label>
+                        <div class="form-check form-switch form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="togglePorcentajesV4" checked>
+                            <label class="form-check-label fw-bold" for="togglePorcentajesV4" style="color:#1F0F80;">Barras (%)</label>
+                        </div>
+                        <div class="form-check form-switch form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="toggleCantidadesV4" checked>
+                            <label class="form-check-label fw-bold" for="toggleCantidadesV4" style="color:#E74C3C;">Curva (Vol)</label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="col-lg-7">
-                    <div id="vis4" class="chart-container"></div>
+                <div class="col-12">
+                    <div id="vis4" class="chart-container" style="height: 650px;"></div>
                 </div>
 
             </div>
@@ -1155,117 +1176,153 @@
         Papa.parse('data/Cruce_04_Traducido_Al_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV3.espanol = r.data; checkLoadV3(); } });
         
         // ---------------------------------------------------------
-        // LÓGICA DE VISUALIZACIÓN 4 (Evolución de Idiomas - Dinámico)
+        // LÓGICA DE VISUALIZACIÓN 4 (Dual-Axis Dinámico)
         // ---------------------------------------------------------
         var chart4 = echarts.init(document.getElementById('vis4'));
-        var rawDataV4 = [];
-        
-        // Ampliamos la paleta de colores para soportar 10 idiomas
-        const paletteV4 = ['#1F0F80', '#006DF7', '#817BA6', '#A09CBE', '#17142B', '#2C3E50', '#E74C3C', '#3498DB', '#95A5A6', '#7F8C8D'];
+        var rawDataV4 = { ingles: [], portugues: [], espanol: [] };
+        var datasetsLoadedV4 = 0;
 
-        function renderVis4(paisFilter) {
-            let data = rawDataV4.filter(d => d.ANO && d.ANO >= '2010' && d.ANO <= '2025');
-            
-            // Aplicar filtro de país si no es "TODOS"
-            if (paisFilter !== 'TODOS') {
-                data = data.filter(d => d.PAIS === paisFilter);
-            }
+        function renderVis4() {
+            let flujo = document.getElementById('filtroFlujoVis4').value;
+            let paisFilter = document.getElementById('filtroPaisVis4').value;
+            let showPercents = document.getElementById('togglePorcentajesV4').checked;
+            let showQuantities = document.getElementById('toggleCantidadesV4').checked;
 
-            let years = [...new Set(data.map(d => d.ANO))].sort();
-            
-            // Calcular el Top 10 de idiomas dinámicamente para el país seleccionado
-            let idiomasTotales = {};
-            data.forEach(d => {
-                let idioma = d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'];
-                // Excluir vacíos y "SIN IDENTIFICAR"
-                if(idioma && idioma !== 'SIN DATO' && idioma !== 'SIN IDENTIFICAR') { 
-                    idiomasTotales[idioma] = (idiomasTotales[idioma] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0); 
+            let activeData = rawDataV4[flujo];
+            let filteredData = (paisFilter !== 'TODOS') ? activeData.filter(d => d.PAIS === paisFilter) : activeData;
+
+            // Determinar contexto: Origen o Destino
+            let colIdioma = (flujo === 'espanol') ? 'IDIOMA.DEL.ESTANDARIZADO.COMPLETO' : 'IDIOMA.ESTANDARIZADO.COMPLETO';
+            let labelIdioma = (flujo === 'espanol') ? 'Origen' : 'Destino';
+
+            // 1. Calcular Volumen por Año para Ordenar el Eje X
+            let yearTotals = {};
+            filteredData.forEach(d => {
+                if(d.ANO && d.ANO !== 'SIN DATO') {
+                    yearTotals[d.ANO] = (yearTotals[d.ANO] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
                 }
             });
-            
-            // Extraer los 10 más fuertes
-            let topIdiomas = Object.keys(idiomasTotales).sort((a,b) => idiomasTotales[b] - idiomasTotales[a]).slice(0, 10);
 
-            // Armar las series para el gráfico de áreas
-            let seriesData = topIdiomas.map(idioma => {
-                let dataPorAno = years.map(year => {
-                    return data.filter(d => d.ANO === year && d['IDIOMA.DEL.ESTANDARIZADO.COMPLETO'] === idioma)
-                               .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
+            // Ordenar años de MENOR a MAYOR volumen
+            let sortedYears = Object.keys(yearTotals)
+                .map(k => ({ year: k, volume: yearTotals[k] }))
+                .sort((a, b) => a.volume - b.volume);
+
+            let xAxisYears = sortedYears.map(y => y.year);
+            let volumeCurve = sortedYears.map(y => y.volume);
+
+            // 2. Unificación del Top 15 de Idiomas
+            let masterSet = new Set();
+            xAxisYears.forEach(year => {
+                let dataYear = filteredData.filter(d => d.ANO === year);
+                let counts = {};
+                dataYear.forEach(d => {
+                    let idm = d[colIdioma];
+                    if (idm && idm !== 'SIN DATO' && idm !== 'SIN IDENTIFICAR') {
+                        counts[idm] = (counts[idm] || 0) + parseInt(d.CANTIDAD_REGISTROS || 0);
+                    }
                 });
-                return { 
-                    name: idioma, type: 'line', stack: 'Total', smooth: true, 
-                    areaStyle: { opacity: 0.8 }, emphasis: { focus: 'series' }, 
-                    data: dataPorAno 
-                };
+                // Extraer top 15 de este año y sumar al global
+                Object.keys(counts).sort((a,b) => counts[b] - counts[a]).slice(0, 15).forEach(i => masterSet.add(i));
             });
 
+            let unifiedLanguages = Array.from(masterSet);
+            let seriesData = [];
+
+            // 3. Construir Series de Barras
+            if (showPercents) {
+                unifiedLanguages.forEach(idm => {
+                    let idmPcts = xAxisYears.map(year => {
+                        let dataYear = filteredData.filter(d => d.ANO === year);
+                        let totalYear = yearTotals[year];
+                        let val = dataYear.filter(d => d[colIdioma] === idm).reduce((s,r) => s + parseInt(r.CANTIDAD_REGISTROS || 0), 0);
+                        return { 
+                            value: totalYear > 0 ? ((val / totalYear) * 100).toFixed(2) : 0, 
+                            realVal: val, year: year, idioma: idm 
+                        };
+                    });
+                    seriesData.push({
+                        name: idm, type: 'bar', stack: 'total', data: idmPcts, emphasis: { focus: 'series' }
+                    });
+                });
+
+                // Categoría "Otros"
+                let otrosPcts = xAxisYears.map(year => {
+                    let totalYear = yearTotals[year];
+                    let valOtros = filteredData.filter(d => d.ANO === year && !unifiedLanguages.includes(d[colIdioma]))
+                                               .reduce((s,r) => s + parseInt(r.CANTIDAD_REGISTROS || 0), 0);
+                    return { value: totalYear > 0 ? ((valOtros / totalYear) * 100).toFixed(2) : 0, realVal: valOtros, year: year, idioma: 'Otros Idiomas' };
+                });
+                seriesData.push({ name: 'Otros', type: 'bar', stack: 'total', color: '#D5D8DC', data: otrosPcts });
+            }
+
+            // 4. Serie de la Curva
+            if (showQuantities) {
+                seriesData.push({
+                    name: 'Volumen Total', type: 'line', yAxisIndex: 1, smooth: true,
+                    data: volumeCurve, symbolSize: 10, itemStyle: { color: '#E74C3C' },
+                    lineStyle: { width: 4, shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' }
+                });
+            }
+
             var option4 = {
-                tooltip: { 
-                    trigger: 'axis', 
-                    axisPointer: { type: 'cross', label: { backgroundColor: '#17142B' } },
-                    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                    borderColor: '#1F0F80',
-                    textStyle: { color: '#17142B', fontFamily: 'Inter' },
-                    formatter: function (params) {
-                        // params[0].axisValue es el Año seleccionado en el eje X
-                        let h = `<div style="min-width: 180px;">`;
-                        h += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.3em; color: #1F0F80; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">Año: ${params[0].axisValue}</strong>`;
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255, 255, 255, 0.98)', borderColor: '#1F0F80',
+                    formatter: function(params) {
+                        if (params.seriesType === 'line') return `<strong>Año: ${params.name}</strong><br/>Volumen Total: <b>${params.value}</b> obras`;
                         
-                        // Ordenar los valores del tooltip de mayor a menor para ese año específico
-                        let sortedParams = [...params].sort((a, b) => b.value - a.value);
-                        
-                        sortedParams.forEach(p => {
-                            if (p.value > 0) { // Solo mostrar idiomas que tuvieron traducciones ese año
-                                h += `<span style="display:flex; justify-content:space-between; margin-bottom:3px;">
-                                        <span><span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${p.color};"></span>${p.seriesName}</span>
-                                        <strong style="margin-left: 15px;">${p.value}</strong>
-                                      </span>`;
-                            }
-                        });
+                        let d = params.data;
+                        // Top 5 editoriales para este idioma/año
+                        let subData = filteredData.filter(r => r.ANO === d.year && (d.idioma === 'Otros Idiomas' ? !unifiedLanguages.includes(r[colIdioma]) : r[colIdioma] === d.idioma));
+                        let edits = {};
+                        subData.forEach(r => { let e = r.GRUPO_EDITORIAL_COMPLETO; if(e && e !== 'SIN DATO') edits[e] = (edits[e] || 0) + parseInt(r.CANTIDAD_REGISTROS || 0); });
+                        let topEdits = Object.keys(edits).map(k=>({n:k, v:edits[k]})).sort((a,b)=>b.v - a.v).slice(0, 5);
+
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
+                        h += `<strong style="font-size:1.2em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">Año: ${d.year}</strong>`;
+                        h += `<span style="color:#817BA6;">${labelIdioma}:</span> <b>${d.idioma}</b><br/>`;
+                        h += `Obras: <b>${d.realVal}</b> (${params.value}%)<br><br>`;
+                        if(topEdits.length > 0) {
+                            h += `<span style="font-weight:bold; text-transform:uppercase; font-size:9px;">Top 5 Editoriales:</span><br/>`;
+                            topEdits.forEach((e, i) => h += `<span style="display:block; margin-top:4px; white-space:normal;">${i+1}. ${e.n} <b>(${e.v})</b></span>`);
+                        }
                         h += `</div>`;
                         return h;
                     }
                 },
-                legend: { 
-                    data: topIdiomas, bottom: 0, type: 'scroll', // 'scroll' evita que la leyenda se desborde si son muchos
-                    textStyle: { fontFamily: 'Inter', fontSize: 11 } 
-                },
-                grid: { left: '8%', right: '5%', bottom: '25%', top: '5%' },
-                color: paletteV4,
-                xAxis: [{ 
-                    type: 'category', boundaryGap: false, data: years, 
-                    name: 'Año de Publicación', nameLocation: 'middle', nameGap: 35, nameTextStyle: axisTextStyle,
-                    axisLabel: {fontFamily: 'Inter'} 
-                }],
-                yAxis: [{ 
-                    type: 'value', 
-                    name: 'Obras Traducidas', nameLocation: 'middle', nameGap: 50, nameTextStyle: axisTextStyle,
-                    splitLine: { lineStyle: { color: '#f0f0f0' } } 
-                }],
+                legend: { type: 'scroll', bottom: 0, textStyle: { fontSize: 10, fontFamily: 'Inter' }, pageIconColor: '#006DF7' },
+                grid: { left: '5%', right: '5%', bottom: '15%', top: '10%', containLabel: true },
+                xAxis: { type: 'category', data: xAxisYears, axisLabel: { fontWeight: 'bold' } },
+                yAxis: [
+                    { type: 'value', max: 100, name: 'Composición (%)', axisLabel: { formatter: '{value}%' }, show: showPercents },
+                    { type: 'value', name: 'Volumen (Obras)', splitLine: { show: false }, show: showQuantities }
+                ],
                 series: seriesData
             };
-            chart4.setOption(option4, true); // true para limpiar el gráfico anterior al cambiar de país
+            chart4.setOption(option4, true);
         }
 
-        Papa.parse('data/Cruce_05_Evolucion_Idiomas_Origen.csv', {
-            download: true, header: true,
-            complete: function(results) {
-                rawDataV4 = results.data;
-                
-                // Poblar el menú de Países
-                let selectPais = document.getElementById('filtroPaisVis4');
-                let paises = [...new Set(rawDataV4.map(d => d.PAIS))].filter(p => p && p !== 'SIN DATO').sort();
-                
-                paises.forEach(p => {
-                    let opt = document.createElement('option');
-                    opt.value = p; opt.innerHTML = p;
-                    selectPais.appendChild(opt);
-                });
+        // Toggles y Filtros
+        document.getElementById('filtroFlujoVis4').addEventListener('change', renderVis4);
+        document.getElementById('togglePorcentajesV4').addEventListener('change', renderVis4);
+        document.getElementById('toggleCantidadesV4').addEventListener('change', renderVis4);
 
-                selectPais.addEventListener('change', (e) => renderVis4(e.target.value));
-                renderVis4('TODOS'); // Carga inicial
+        function checkLoadV4() {
+            datasetsLoadedV4++;
+            if(datasetsLoadedV4 === 3) {
+                let selectPais = document.getElementById('filtroPaisVis4');
+                let allPaises = [...new Set([...rawDataV4.ingles.map(d=>d.PAIS), ...rawDataV4.portugues.map(d=>d.PAIS), ...rawDataV4.espanol.map(d=>d.PAIS)])].filter(p=>p && p!=='SIN DATO').sort();
+                allPaises.forEach(p => { let opt = document.createElement('option'); opt.value = p; opt.innerHTML = p; selectPais.appendChild(opt); });
+                selectPais.addEventListener('change', renderVis4);
+                renderVis4();
             }
-        });
+        }
+
+        // Cargamos los mismos archivos que Vis 3 para consistencia
+        Papa.parse('data/Cruce_11_Dependencia_Ingles.csv', { download: true, header: true, complete: function(r) { rawDataV4.ingles = r.data; checkLoadV4(); } });
+        Papa.parse('data/Cruce_03_Traducido_Desde_Portugues.csv', { download: true, header: true, complete: function(r) { rawDataV4.portugues = r.data; checkLoadV4(); } });
+        Papa.parse('data/Cruce_04_Traducido_Al_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV4.espanol = r.data; checkLoadV4(); } });
 
         // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 5 (Barras Agrupadas + Tooltip Top 5 Editoriales)
