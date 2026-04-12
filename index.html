@@ -411,7 +411,7 @@
                     <p class="chart-description">
                         América Latina respira en dos idiomas dominantes. Este <strong>Diagrama de Sankey</strong> visualiza los "ríos" de datos que revelan cómo ocurre el intercambio literario directo entre la orilla lusófona y la hispanohablante.
                         <br><br>
-                        Siga el flujo de las bandas desde la izquierda hacia la derecha: el recorrido inicia en la <strong>Lengua Original</strong> de la obra, viaja hacia el <strong>País</strong> que gestionó su publicación, se distribuye por el <strong>Género Literario</strong> correspondiente y desemboca en la <strong>Lengua de Destino</strong>. El grosor de cada caudal representa la cantidad de publicaciones.
+                        Siga el flujo de las bandas desde la izquierda hacia la derecha: el recorrido inicia en la <strong>Lengua Original</strong> de la obra, viaja hacia el <strong>País</strong> que gestionó su publicación, y desemboca directamente en la <strong>Lengua de Destino</strong>. El grosor de cada caudal representa la cantidad de publicaciones.
                         <br><br>
                         <em>Interacción:</em> Utilice el filtro para analizar años específicos. <strong>Pase el cursor sobre cualquier banda fluida (enlace)</strong> para revelar un cuadro detallado que calculará, en tiempo real, el <strong>Top 5 de grupos editoriales</strong> que impulsaron ese flujo exacto.
                     </p>
@@ -420,7 +420,7 @@
                         <label class="text-muted small text-uppercase fw-bold d-block mb-1" style="font-family: sans-serif;">Filtrar por Año de Publicación:</label>
                         <select id="filtroAnoVis7" class="custom-select" style="font-size: 1.1rem; max-width: 100%;">
                             <option value="TODOS">Todos los años históricos</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
 
@@ -1588,7 +1588,7 @@
         });
 
         // ---------------------------------------------------------
-        // LÓGICA DE VISUALIZACIÓN 7 (Diagrama de Sankey Esp-Pt)
+        // LÓGICA DE VISUALIZACIÓN 7 (Diagrama de Sankey Esp-Pt Simplificado)
         // ---------------------------------------------------------
         var chart7 = echarts.init(document.getElementById('vis7'));
         var rawDataV7 = { esp_pt: [], pt_esp: [] };
@@ -1620,31 +1620,27 @@
                 }
             }
 
-            // Procesar flujo ESP -> PT
+            // Procesar flujo ESP -> PT (Sin capa de género)
             dataEspPt.forEach(d => {
                 let val = parseInt(d.CANTIDAD_REGISTROS || 0);
                 let pais = d.PAIS;
-                let gen = d['SUBCATEGORIA.DEWEY'];
                 let ed = d.GRUPO_EDITORIAL_COMPLETO;
                 
-                if (val > 0 && pais && gen) {
+                if (val > 0 && pais && pais !== 'SIN DATO') {
                     addLink('Español (Origen)', pais, val, ed);
-                    addLink(pais, gen + ' ', val, ed); // Espacio extra para que el nombre del nodo no colisione con países
-                    addLink(gen + ' ', 'Portugués (Destino)', val, ed);
+                    addLink(pais, 'Portugués (Destino)', val, ed);
                 }
             });
 
-            // Procesar flujo PT -> ESP
+            // Procesar flujo PT -> ESP (Sin capa de género)
             dataPtEsp.forEach(d => {
                 let val = parseInt(d.CANTIDAD_REGISTROS || 0);
                 let pais = d.PAIS;
-                let gen = d['SUBCATEGORIA.DEWEY'];
                 let ed = d.GRUPO_EDITORIAL_COMPLETO;
                 
-                if (val > 0 && pais && gen) {
+                if (val > 0 && pais && pais !== 'SIN DATO') {
                     addLink('Portugués (Origen)', pais, val, ed);
-                    addLink(pais, gen + ' ', val, ed);
-                    addLink(gen + ' ', 'Español (Destino)', val, ed);
+                    addLink(pais, 'Español (Destino)', val, ed);
                 }
             });
 
@@ -1709,7 +1705,7 @@
                 series: [{
                     type: 'sankey',
                     layout: 'none',
-                    emphasis: { focus: 'adjacency' }, // Al poner el mouse, ilumina toda la ruta
+                    emphasis: { focus: 'adjacency' },
                     nodeAlign: 'justify',
                     data: nodesList,
                     links: linksList,
@@ -1727,29 +1723,6 @@
                 chart7.clear();
             }
         }
-
-        // Controlador de carga para asegurar que ambos archivos estén listos
-        function checkLoadV7() {
-            datasetsLoadedV7++;
-            if (datasetsLoadedV7 === 2) {
-                let selectAno = document.getElementById('filtroAnoVis7');
-                let allYears = [...new Set([
-                    ...rawDataV7.esp_pt.map(d => d.ANO), 
-                    ...rawDataV7.pt_esp.map(d => d.ANO)
-                ])].filter(a => a && a !== 'SIN DATO' && a >= '2010' && a <= '2025').sort().reverse();
-                
-                allYears.forEach(a => {
-                    let opt = document.createElement('option');
-                    opt.value = a; opt.innerHTML = a; selectAno.appendChild(opt);
-                });
-
-                selectAno.addEventListener('change', renderVis7);
-                renderVis7();
-            }
-        }
-
-        Papa.parse('data/Cruce_09_Flujo_Espanol_a_Portugues.csv', { download: true, header: true, complete: function(r) { rawDataV7.esp_pt = r.data; checkLoadV7(); } });
-        Papa.parse('data/Cruce_10_Flujo_Portugues_a_Espanol.csv', { download: true, header: true, complete: function(r) { rawDataV7.pt_esp = r.data; checkLoadV7(); } });
         
         // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 8 (Tornado Chart Dinámico)
