@@ -801,49 +801,58 @@
         });
 
         
-
         // ---------------------------------------------------------
         // VISUALIZACIÓN 1
         // ---------------------------------------------------------
         var chart1 = echarts.init(document.getElementById('vis1'));
         var rawDataV1 = [];
+        
+        // NUEVO: Variable para rastrear el estado de la leyenda (encendida/apagada)
+        var activeLegendsV1 = { 'Comercial': true, 'Universitaria': true };
+
+        // NUEVO: Escuchar clics en la leyenda para reordenar dinámicamente
+        chart1.on('legendselectchanged', function(params) {
+            activeLegendsV1 = params.selected; // Actualiza el estado (true/false)
+            let currentYear = document.getElementById('filtroAnoVis1').value;
+            renderVis1(currentYear); // Vuelve a renderizar y ordenar
+        });
 
         function renderVis1(yearFilter) {
             let filteredData = rawDataV1;
             if(yearFilter !== 'TODOS') filteredData = rawDataV1.filter(d => d.ANO === yearFilter);
 
-            // 1. Obtener lista única de países (sin ordenar alfabéticamente todavía)
-            let uniqueCountries = [...new Set(filteredData.map(d => d.PAIS))].filter(c => c && c !== 'SIN DATO');
-            
-            // 2. Calcular los totales por país y guardarlos en un arreglo de objetos
-            let countryStats = [];
-
-            uniqueCountries.forEach(pais => {
-                let sumC = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL COMERCIAL')
-                                       .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                let sumU = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === 'EDITORIAL UNIVERSITARIA')
-                                       .reduce((sum, row) => sum + parseInt(row.CANTIDAD_REGISTROS || 0), 0);
-                
-                let total = sumC + sumU;
-                
-                // Solo incluimos el país si tiene datos en el filtro actual
-                if (total > 0) {
-                    countryStats.push({
-                        pais: pais,
-                        comercial: sumC,
-                        universitaria: sumU,
-                        total: total
-                    });
+            // 1. Agrupar totales brutos por país
+            let countryTotals = {};
+            filteredData.forEach(d => {
+                let pais = d.PAIS;
+                if(pais && pais !== 'SIN DATO') {
+                    if(!countryTotals[pais]) countryTotals[pais] = { c: 0, u: 0 };
+                    let val = parseInt(d.CANTIDAD_REGISTROS || 0);
+                    if(d.TIPO_AGENTE === 'EDITORIAL COMERCIAL') countryTotals[pais].c += val;
+                    if(d.TIPO_AGENTE === 'EDITORIAL UNIVERSITARIA') countryTotals[pais].u += val;
                 }
             });
 
-            // 3. ORDENAR DINÁMICAMENTE de menor a mayor según el total acumulado
-            countryStats.sort((a, b) => a.total - b.total);
+            // 2. Lógica de ordenamiento dinámico
+            let sortedCountriesData = Object.keys(countryTotals).map(pais => {
+                let c = countryTotals[pais].c;
+                let u = countryTotals[pais].u;
+                
+                // El valor para ordenar depende EXCLUSIVAMENTE de qué leyendas estén activas
+                let sortValue = 0;
+                if (activeLegendsV1['Comercial']) sortValue += c;
+                if (activeLegendsV1['Universitaria']) sortValue += u;
 
-            // 4. Extraer los arreglos finales ya ordenados para inyectarlos en ECharts
-            let countries = countryStats.map(item => item.pais);
-            let comerciales = countryStats.map(item => item.comercial);
-            let universitarias = countryStats.map(item => item.universitaria);
+                return { pais: pais, c: c, u: u, sortValue: sortValue };
+            });
+
+            // Ordenar de MENOR a MAYOR basándonos en el 'sortValue'
+            sortedCountriesData.sort((a, b) => a.sortValue - b.sortValue);
+
+            // 3. Extraer los arrays ordenados para inyectar en ECharts
+            let countries = sortedCountriesData.map(d => d.pais);
+            let comerciales = sortedCountriesData.map(d => d.c);
+            let universitarias = sortedCountriesData.map(d => d.u);
 
             var option = {
                 tooltip: { 
@@ -855,10 +864,9 @@
                         let pais = params.name;
                         let tipoAgente = params.seriesName === 'Comercial' ? 'EDITORIAL COMERCIAL' : 'EDITORIAL UNIVERSITARIA';
                         
-                        // Filtramos los datos exactos de ese país, agente y el año actualmente seleccionado
+                        // Filtramos los datos exactos para el Tooltip (Se mantiene intacto)
                         let countryData = filteredData.filter(d => d.PAIS === pais && d.TIPO_AGENTE === tipoAgente);
                         
-                        // Agrupamos y contamos por Grupo Editorial
                         let grupos = {};
                         countryData.forEach(d => {
                             let grupo = d.GRUPO_EDITORIAL_COMPLETO;
@@ -867,13 +875,11 @@
                             }
                         });
                         
-                        // Ordenamos de mayor a menor y extraemos el Top 5
                         let topGrupos = Object.keys(grupos)
                             .map(k => ({ nombre: k, cantidad: grupos[k] }))
                             .sort((a, b) => b.cantidad - a.cantidad)
                             .slice(0, 5);
                             
-                        // Construimos la etiqueta HTML del Tooltip
                         let tooltipHtml = `<div style="font-family: 'Inter', sans-serif; min-width: 200px;">`;
                         tooltipHtml += `<strong style="font-family: 'Playfair Display', serif; font-size: 1.2em; color: ${params.color}; border-bottom: 1px solid #ccc; display: block; margin-bottom: 8px; padding-bottom: 5px;">${pais} - ${params.seriesName}</strong>`;
                         tooltipHtml += `Total traducido: <b>${params.value}</b> pub.<br><br>`;
@@ -881,7 +887,6 @@
                         if(topGrupos.length > 0) {
                             tooltipHtml += `<span style="font-size: 0.85em; color: #817BA6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">Top 5 Grupos Editoriales:</span><br>`;
                             topGrupos.forEach((g, i) => {
-                                // Acortar nombres muy largos para que no deformen la ventanita
                                 let nombreCorto = g.nombre.length > 35 ? g.nombre.substring(0, 35) + '...' : g.nombre;
                                 tooltipHtml += `<span style="font-size: 0.9em; display: block; margin-top: 4px;"><b>${i+1}.</b> ${nombreCorto} <span style="color:#006DF7">(${g.cantidad})</span></span>`;
                             });
@@ -893,7 +898,13 @@
                         return tooltipHtml;
                     }
                 },
-                legend: { data: ['Comercial', 'Universitaria'], bottom: 0, textStyle: { fontFamily: 'Lora', color: '#817BA6' } },
+                // Sincronizamos la leyenda con nuestra variable de estado
+                legend: { 
+                    data: ['Comercial', 'Universitaria'], 
+                    selected: activeLegendsV1, 
+                    bottom: 0, 
+                    textStyle: { fontFamily: 'Lora', color: '#817BA6' } 
+                },
                 grid: { left: '10%', right: '5%', bottom: '22%', top: '5%' },
                 xAxis: { 
                     type: 'category', data: countries, 
@@ -911,7 +922,7 @@
                     { name: 'Universitaria', type: 'bar', stack: 'total', itemStyle: { borderRadius: [3, 3, 0, 0] }, data: universitarias }
                 ]
             };
-            chart1.setOption(option);
+            chart1.setOption(option, true); // El "true" obliga al gráfico a re-dibujarse completamente
         }
 
         Papa.parse('data/Cruce_01_Editoriales_Agente_Pais_Ano.csv', {
