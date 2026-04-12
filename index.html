@@ -2010,15 +2010,23 @@
             // 1. Filtrar Data Larga
             let filtered = rawDataV12.filter(d => d.PAIS === paisVal && d.ANO === anoVal);
             
+            // Si no hay datos, limpiamos el gráfico y salimos
+            if (filtered.length === 0) {
+                chart12.clear();
+                return;
+            }
+
             // Obtener etiquetas únicas de deciles ordenados
             let decilesLabels = [...new Set(filtered.map(d => d.DECILE_LABEL))].sort((a,b) => {
-                let orderA = filtered.find(x => x.DECILE_LABEL === a).DECILE_ORDER;
-                let orderB = filtered.find(x => x.DECILE_LABEL === b).DECILE_ORDER;
+                let objA = filtered.find(x => x.DECILE_LABEL === a);
+                let objB = filtered.find(x => x.DECILE_LABEL === b);
+                let orderA = objA ? parseInt(objA.DECILE_ORDER || 0) : 0;
+                let orderB = objB ? parseInt(objB.DECILE_ORDER || 0) : 0;
                 return orderA - orderB;
             });
 
             // 2. Preparar Series de Idiomas (Barras 100%)
-            let idiomasPresentes = [...new Set(filtered.map(d => d.IDIOMA_ORIGEN))];
+            let idiomasPresentes = [...new Set(filtered.map(d => d.IDIOMA_ORIGEN))].filter(i => i); // Remove undefined
             let seriesData = [];
 
             if (showBars) {
@@ -2027,10 +2035,12 @@
                         let row = filtered.find(d => d.DECILE_LABEL === label && d.IDIOMA_ORIGEN === idm);
                         if (!row) return 0;
                         
-                        // Calcular porcentaje relativo al total de ese decil
+                        // Defensive parsing to prevent NaN errors
                         let totalDecil = filtered.filter(d => d.DECILE_LABEL === label)
-                                                 .reduce((s, r) => s + parseInt(r.CANTIDAD_OBRAS_IDIOMA), 0);
-                        return totalDecil > 0 ? ((parseInt(row.CANTIDAD_OBRAS_IDIOMA) / totalDecil) * 100).toFixed(2) : 0;
+                                                 .reduce((s, r) => s + (parseInt(r.CANTIDAD_OBRAS_IDIOMA) || 0), 0);
+                                                 
+                        let val = parseInt(row.CANTIDAD_OBRAS_IDIOMA) || 0;
+                        return totalDecil > 0 ? ((val / totalDecil) * 100).toFixed(2) : 0;
                     });
 
                     seriesData.push({
@@ -2046,7 +2056,7 @@
             if (showLine) {
                 let lineData = decilesLabels.map(label => {
                     let row = filtered.find(d => d.DECILE_LABEL === label);
-                    return row ? parseFloat(row.PROMEDIO_REGISTROS) : 0;
+                    return row ? (parseFloat(row.PROMEDIO_REGISTROS) || 0) : 0;
                 });
 
                 seriesData.push({
@@ -2069,9 +2079,10 @@
                         let rows = filtered.filter(d => d.DECILE_LABEL === label);
                         if (rows.length === 0) return '';
                         
-                        let avg = rows[0].PROMEDIO_REGISTROS;
-                        let std = rows[0].DESVIACION_ESTANDAR;
-                        let eds = rows[0].CANTIDAD_EDITORIALES;
+                        // Defensive formatting
+                        let avg = rows[0].PROMEDIO_REGISTROS || 0;
+                        let std = rows[0].DESVIACION_ESTANDAR || 0;
+                        let eds = rows[0].CANTIDAD_EDITORIALES || 0;
 
                         let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
                         h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">Segmento: ${label}</strong>`;
@@ -2080,8 +2091,13 @@
                         
                         h += `<span style="color:#17142B; font-weight:bold; text-transform:uppercase; font-size:9px;">Composición lingüística:</span><br/>`;
                         
-                        // Solo mostrar idiomas en el tooltip que tengan valor en este decil
-                        params.filter(p => p.seriesType === 'bar' && p.value > 0).forEach(p => {
+                        // Filter out line chart params and 0 values
+                        let barParams = params.filter(p => p.seriesType === 'bar' && parseFloat(p.value) > 0);
+                        
+                        // Sort so largest percentage is on top
+                        barParams.sort((a,b) => parseFloat(b.value) - parseFloat(a.value));
+                        
+                        barParams.forEach(p => {
                             h += `<span style="display:flex; justify-content:space-between; margin-top:3px;">
                                     <span><span style="display:inline-block;margin-right:5px;border-radius:10px;width:9px;height:9px;background-color:${p.color};"></span>${p.seriesName}</span>
                                     <strong style="margin-left:15px;">${p.value}%</strong>
@@ -2128,8 +2144,9 @@
                 let selPais = document.getElementById('filtroPaisVis12');
                 let selAno = document.getElementById('filtroAnoVis12');
                 
-                let paises = [...new Set(rawDataV12.map(d => d.PAIS))].filter(p => p !== 'TODOS').sort();
-                let anos = [...new Set(rawDataV12.map(d => d.ANO))].filter(a => a !== 'TODOS').sort().reverse();
+                // Get distinct values, filtering out undefined/empty
+                let paises = [...new Set(rawDataV12.map(d => d.PAIS))].filter(p => p && p !== 'TODOS').sort();
+                let anos = [...new Set(rawDataV12.map(d => d.ANO))].filter(a => a && a !== 'TODOS').sort().reverse();
                 
                 paises.forEach(p => { let o = document.createElement('option'); o.value = p; o.innerHTML = p; selPais.appendChild(o); });
                 anos.forEach(a => { let o = document.createElement('option'); o.value = a; o.innerHTML = a; selAno.appendChild(o); });
@@ -2140,7 +2157,6 @@
                 renderVis12();
             }
         });
-
         
         // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 9 (Diagrama Relacional Sankey: Idiomas a Géneros)
