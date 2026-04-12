@@ -545,12 +545,11 @@
             let data = rawDataV11;
             if (yearFilter !== 'TODOS') data = data.filter(d => d.ANO === yearFilter);
 
-            // 1. Agrupar por País y por Estado
-            let paisesSet = [...new Set(data.map(d => d.PAIS))].sort();
+            // 1. Obtener lista única de países
+            let paisesSet = [...new Set(data.map(d => d.PAIS))].filter(p => p && p !== 'SIN DATO');
             
-            let finalPaises = [];
-            let serieTraducido = [];
-            let serieNoTraducido = [];
+            // 2. Calcular estadísticas y guardarlas en un arreglo para poder ordenarlas
+            let countryStats = [];
 
             paisesSet.forEach(pais => {
                 let dataPais = data.filter(d => d.PAIS === pais);
@@ -559,19 +558,39 @@
                 let totalGral = totalTrad + totalNoTrad;
 
                 if (totalGral > 0) {
-                    finalPaises.push(pais);
-                    // Calculamos el porcentaje para el eje Y, pero guardamos el valor real para el tooltip
-                    serieTraducido.push({
-                        value: (totalTrad / totalGral * 100).toFixed(2),
-                        realValue: totalTrad,
-                        tipo: 'TRADUCIDO'
-                    });
-                    serieNoTraducido.push({
-                        value: (totalNoTrad / totalGral * 100).toFixed(2),
-                        realValue: totalNoTrad,
-                        tipo: 'NO TRADUCIDO'
+                    let pctTrad = (totalTrad / totalGral) * 100;
+                    let pctNoTrad = (totalNoTrad / totalGral) * 100;
+                    
+                    countryStats.push({
+                        pais: pais,
+                        pctTrad: pctTrad,
+                        pctNoTrad: pctNoTrad,
+                        realTrad: totalTrad,
+                        realNoTrad: totalNoTrad
                     });
                 }
+            });
+
+            // 3. ORDENAR DINÁMICAMENTE: De menor a mayor porcentaje de traducciones
+            countryStats.sort((a, b) => a.pctTrad - b.pctTrad);
+
+            // 4. Construir los arreglos finales ordenados para ECharts
+            let finalPaises = [];
+            let serieTraducido = [];
+            let serieNoTraducido = [];
+
+            countryStats.forEach(stat => {
+                finalPaises.push(stat.pais);
+                serieTraducido.push({
+                    value: stat.pctTrad.toFixed(2),
+                    realValue: stat.realTrad,
+                    tipo: 'TRADUCIDO'
+                });
+                serieNoTraducido.push({
+                    value: stat.pctNoTrad.toFixed(2),
+                    realValue: stat.realNoTrad,
+                    tipo: 'NO TRADUCIDO'
+                });
             });
 
             var option11 = {
@@ -594,14 +613,14 @@
                         let topEdits = Object.keys(edits).map(k => ({ n: k, v: edits[k] })).sort((a, b) => b.v - a.v).slice(0, 5);
 
                         let colorLabel = estado === 'TRADUCIDO' ? '#006DF7' : '#817BA6';
-                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:250px;">`;
-                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.1em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">${pais}</strong>`;
+                        let h = `<div style="font-family:'Inter'; font-size:12px; min-width:260px;">`;
+                        h += `<strong style="font-family:'Playfair Display', serif; font-size:1.2em; color:#1F0F80; border-bottom:1px solid #eee; display:block; margin-bottom:8px; padding-bottom:4px;">${pais}</strong>`;
                         h += `<span style="color:${colorLabel}; font-weight:bold;">${estado}:</span> <b>${realVal}</b> obras (${pct}%)<br><br>`;
                         
                         if (topEdits.length > 0) {
                             h += `<span style="color:#17142B; font-weight:bold; text-transform:uppercase; font-size:9px;">Top 5 Grupos Editoriales:</span><br/>`;
                             topEdits.forEach((e, i) => {
-                                h += `<span style="display:block; margin-top:4px; white-space: normal; line-height:1.2;"><b>${i+1}.</b> ${e.n} <b>(${e.v})</b></span>`;
+                                h += `<span style="display:block; margin-top:4px; white-space: normal; line-height:1.3;"><b>${i+1}.</b> ${e.n} <b>(${e.v})</b></span>`;
                             });
                         }
                         h += `</div>`;
@@ -641,7 +660,7 @@
                 ]
             };
 
-            chart11.setOption(option11, true);
+            chart11.setOption(option11, true); // true fuerza el redibujado completo para que la animación de ordenamiento se vea fluida
         }
 
         Papa.parse('data/Cruce_Traducciones_vs_NoTraducciones_Pais.csv', {
@@ -658,7 +677,6 @@
                 renderVis11();
             }
         });
-        
 
         // ---------------------------------------------------------
         // LÓGICA DE VISUALIZACIÓN 10 (Sankey Global con Filtrado Jerárquico)
